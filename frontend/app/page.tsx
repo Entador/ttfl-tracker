@@ -1,17 +1,24 @@
 "use client";
 
+import DateNavigation from "@/components/DateNavigation";
 import PlayerFilters, {
   FilterOption,
   SortOption,
 } from "@/components/PlayerFilters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getTonightsPlayers, pickPlayer, Player } from "@/lib/api";
-import { AlertCircle, Calendar, Loader2, CircleDot } from "lucide-react";
-import { useEffect, useMemo, useState, useCallback, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { getTonightsPlayers, Player } from "@/lib/api";
+import {
+  getDaysUntilEligible,
+  getLastPickedDate,
+  getPickForDate,
+  removePick,
+  savePick,
+} from "@/lib/picks";
+import { AlertCircle, Calendar, CircleDot, Loader2 } from "lucide-react";
 import Link from "next/link";
-import DateNavigation from "@/components/DateNavigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 function HomePageContent() {
   const router = useRouter();
@@ -20,9 +27,9 @@ function HomePageContent() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [picking, setPicking] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("avg-desc");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
+  const [currentPick, setCurrentPick] = useState<number | null>(null); // player_id picked for current date
 
   // Get date from URL or default to today
   const dateParam = searchParams.get("date");
@@ -78,49 +85,35 @@ function HomePageContent() {
     loadPlayers();
   }, [loadPlayers]);
 
-  async function handlePickPlayer(player: Player) {
-    if (picking) return;
+  // Load current pick from localStorage when date changes
+  useEffect(() => {
+    const pick = getPickForDate(currentDate);
+    setCurrentPick(pick?.playerId || null);
+  }, [currentDate]);
 
-    // Only allow picking for today's games
-    if (currentDate !== today) {
-      alert("You can only pick players for today's games");
-      return;
-    }
-
-    const confirmed = confirm(
-      `Pick ${player.name} (${player.team} ${player.is_home ? "vs" : "@"} ${
-        player.opponent
-      })?\n\nThis player will be unavailable for 30 days.`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setPicking(true);
-      await pickPlayer({
-        player_id: player.player_id,
-        game_date: new Date().toISOString().split("T")[0],
-        opponent: player.opponent,
-        is_home: player.is_home,
-        ttfl_score: 0,
-      });
-
-      alert(`Successfully picked ${player.name}!`);
-      await loadPlayers();
-    } catch (err) {
-      alert(
-        `Failed to pick player: ${
-          err instanceof Error ? err.message : "Unknown error"
-        }`
-      );
-    } finally {
-      setPicking(false);
-    }
+  function handlePickPlayer(player: Player) {
+    savePick(player.player_id, currentDate);
+    setCurrentPick(player.player_id);
   }
+
+  function handleRemovePick() {
+    removePick(currentDate);
+    setCurrentPick(null);
+  }
+
+  // Add eligibility info to players (calculated from localStorage)
+  const playersWithEligibility = useMemo(() => {
+    return players.map((p) => ({
+      ...p,
+      is_eligible: !getLastPickedDate(p.player_id, currentDate),
+      last_picked_date: getLastPickedDate(p.player_id, currentDate),
+      days_until_eligible: getDaysUntilEligible(p.player_id, currentDate),
+    }));
+  }, [players, currentDate, currentPick]); // re-compute when pick changes
 
   // Filter and sort players
   const filteredAndSortedPlayers = useMemo(() => {
-    let filtered = [...players];
+    let filtered = [...playersWithEligibility];
 
     // Apply filter
     if (filterBy === "available") {
@@ -153,10 +146,12 @@ function HomePageContent() {
     });
 
     return filtered;
-  }, [players, sortBy, filterBy]);
+  }, [playersWithEligibility, sortBy, filterBy]);
 
-  const availableCount = players.filter((p) => p.is_eligible).length;
-  const lockedCount = players.length - availableCount;
+  const availableCount = playersWithEligibility.filter(
+    (p) => p.is_eligible
+  ).length;
+  const lockedCount = playersWithEligibility.length - availableCount;
 
   return (
     <div className="space-y-6">
@@ -239,106 +234,136 @@ function HomePageContent() {
         <>
           {/* Filters and sorting */}
           <PlayerFilters
-        sortBy={sortBy}
-        onSortChange={setSortBy}
-        filterBy={filterBy}
-        onFilterChange={setFilterBy}
-        totalCount={players.length}
-        availableCount={availableCount}
-        lockedCount={lockedCount}
-      />
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            filterBy={filterBy}
+            onFilterChange={setFilterBy}
+            totalCount={players.length}
+            availableCount={availableCount}
+            lockedCount={lockedCount}
+          />
 
-      {/* Player table */}
-      {filteredAndSortedPlayers.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">No players match filters</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b bg-muted/30">
-                  <tr>
-                    <th className="w-8 px-3 py-3"></th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Player</th>
-                    <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">Matchup</th>
-                    <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider">Season</th>
-                    <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider">L10</th>
-                    <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider">L30D</th>
-                    <th className="w-24 px-3 py-3"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredAndSortedPlayers.map((player) => (
-                    <tr
-                      key={player.player_id}
-                      className="hover:bg-muted/20 transition-colors"
-                    >
-                      <td className="px-3 py-3">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            player.is_eligible ? "bg-success" : "bg-destructive"
-                          }`}
-                          title={player.is_eligible ? "Eligible" : `Locked until ${player.last_picked_date}`}
-                        />
-                      </td>
-                      <td className="px-3 py-3">
-                        <Link href={`/players/${player.player_id}`} className="hover:underline">
-                          <div className="font-medium">{player.name}</div>
-                          <div className="text-xs text-muted-foreground">{player.team}</div>
-                        </Link>
-                      </td>
-                      <td className="px-3 py-3 text-sm">
-                        {player.is_home ? (
-                          <span>vs {player.opponent}</span>
-                        ) : (
-                          <span className="text-muted-foreground">@ {player.opponent}</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <span className="font-medium text-muted-foreground">{player.avg_ttfl.toFixed(1)}</span>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <span className="font-semibold text-lg">{player.avg_ttfl_l10.toFixed(1)}</span>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <span className="font-medium text-muted-foreground">{player.avg_ttfl_l30d.toFixed(1)}</span>
-                      </td>
-                      <td className="px-3 py-3">
-                        <Button
-                          size="sm"
-                          onClick={() => handlePickPlayer(player)}
-                          disabled={!player.is_eligible || picking}
-                          variant={player.is_eligible ? "default" : "secondary"}
+          {/* Player table */}
+          {filteredAndSortedPlayers.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  No players match filters
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b bg-muted/30">
+                      <tr>
+                        <th className="w-8 px-3 py-3"></th>
+                        <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">
+                          Player
+                        </th>
+                        <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">
+                          Matchup
+                        </th>
+                        <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider">
+                          Season
+                        </th>
+                        <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider">
+                          L10
+                        </th>
+                        <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider">
+                          L30D
+                        </th>
+                        <th className="w-24 px-3 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filteredAndSortedPlayers.map((player) => (
+                        <tr
+                          key={player.player_id}
+                          className="hover:bg-muted/20 transition-colors"
                         >
-                          Pick
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
+                          <td className="px-3 py-3">
+                            <div
+                              className={`w-2 h-2 rounded-full ${
+                                player.is_eligible
+                                  ? "bg-success"
+                                  : "bg-destructive"
+                              }`}
+                              title={
+                                player.is_eligible
+                                  ? "Eligible"
+                                  : `Locked until ${player.last_picked_date}`
+                              }
+                            />
+                          </td>
+                          <td className="px-3 py-3">
+                            <Link
+                              href={`/players/${player.player_id}`}
+                              className="hover:underline"
+                            >
+                              <div className="font-medium">{player.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {player.team}
+                              </div>
+                            </Link>
+                          </td>
+                          <td className="px-3 py-3 text-sm">
+                            {player.is_home ? (
+                              <span>vs {player.opponent}</span>
+                            ) : (
+                              <span className="text-muted-foreground">
+                                @ {player.opponent}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <span className="font-medium text-muted-foreground">
+                              {player.avg_ttfl.toFixed(1)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <span className="font-semibold text-lg">
+                              {player.avg_ttfl_l10.toFixed(1)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <span className="font-medium text-muted-foreground">
+                              {player.avg_ttfl_l30d.toFixed(1)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3">
+                            {currentPick === player.player_id ? (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={handleRemovePick}
+                              >
+                                Picked
+                              </Button>
+                            ) : player.is_eligible ? (
+                              <Button
+                                size="sm"
+                                onClick={() => handlePickPlayer(player)}
+                              >
+                                Pick
+                              </Button>
+                            ) : (
+                              <span className="inline-block px-2 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded-full">
+                                {player.days_until_eligible}d
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
-      )}
-
-      {/* Picking overlay */}
-      {picking && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <Card>
-            <CardContent className="flex items-center gap-3 py-6 px-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <p className="text-lg">Picking player...</p>
-            </CardContent>
-          </Card>
-        </div>
       )}
     </div>
   );

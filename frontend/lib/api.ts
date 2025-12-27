@@ -9,8 +9,7 @@ export interface Player {
   avg_ttfl: number;
   avg_ttfl_l10: number;
   avg_ttfl_l30d: number;
-  is_eligible: boolean;
-  last_picked_date: string | null;
+  // Eligibility is now calculated client-side from localStorage
 }
 
 export interface PlayerStats {
@@ -40,13 +39,7 @@ export interface PickHistory {
   ttfl_score: number;
 }
 
-export interface PickRequest {
-  player_id: number;
-  game_date: string;
-  opponent: string;
-  is_home: boolean;
-  ttfl_score?: number;
-}
+// PickRequest removed - picks are now stored in localStorage
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_URL}${endpoint}`;
@@ -85,12 +78,7 @@ export async function getPlayerStats(playerId: number): Promise<PlayerStats> {
   return await fetchAPI<PlayerStats>(`/api/players/${playerId}/stats`);
 }
 
-export async function pickPlayer(pick: PickRequest): Promise<{ message: string; game_id: number }> {
-  return await fetchAPI('/api/games/pick', {
-    method: 'POST',
-    body: JSON.stringify(pick),
-  });
-}
+// pickPlayer removed - picks are now stored in localStorage via lib/picks.ts
 
 export async function getPickHistory(limit: number = 50): Promise<PickHistory[]> {
   return await fetchAPI<PickHistory[]>(`/api/games/history?limit=${limit}`);
