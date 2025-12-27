@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "ttfl-tracker-backend"
+version = "0.1.0"
+description = "Backend API for TTFL player tracking"
+authors = ["Thomas"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.32.0"}
+sqlalchemy = "^2.0.36"
+psycopg2-binary = "^2.9.10"
+python-dotenv = "^1.0.1"
+nba-api = "^1.5.2"
+pydantic = "^2.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
