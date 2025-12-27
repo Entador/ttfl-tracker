@@ -29,15 +29,15 @@ export default function DateNavigation({ currentDate }: DateNavigationProps) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Limits (7 days before/after today)
+  // Limits: ±30 days
   const minDate = new Date(today);
-  minDate.setDate(today.getDate() - 7);
+  minDate.setDate(today.getDate() - 30);
 
   const maxDate = new Date(today);
-  maxDate.setDate(today.getDate() + 7);
+  maxDate.setDate(today.getDate() + 30);
 
-  const isAtMin = date <= minDate;
-  const isAtMax = date >= maxDate;
+  const isAtMin = date < minDate;
+  const isAtMax = date > maxDate;
 
   const navigateDate = (offset: number) => {
     const newDate = new Date(date);

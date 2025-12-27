@@ -1,8 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import Optional
+from collections import defaultdict
 from datetime import date, datetime, timedelta
-from sqlalchemy.orm import Session
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload
 
 from models.database import get_db
 from models import Player, Game, Team, TTFLScore
@@ -48,19 +50,74 @@ def _calculate_player_avg_ttfl_last_days(db: Session, player_id: int, days: int)
     return round(sum(s.ttfl_score for s in scores) / len(scores), 1)
 
 
+def _batch_calculate_averages(
+    db: Session, player_ids: list[int]
+) -> dict[int, dict[str, float]]:
+    """
+    Calculate avg_ttfl, avg_ttfl_l10, avg_ttfl_l30d for multiple players in one query.
+
+    Returns dict: {player_id: {'avg_ttfl': x, 'avg_ttfl_l10': y, 'avg_ttfl_l30d': z}}
+    """
+    if not player_ids:
+        return {}
+
+    cutoff_30d = date.today() - timedelta(days=30)
+
+    # Single query: get all scores for all players, with game dates
+    scores_data = (
+        db.query(
+            TTFLScore.player_id,
+            TTFLScore.ttfl_score,
+            Game.game_date
+        )
+        .join(Game, TTFLScore.game_id == Game.id)
+        .filter(
+            TTFLScore.player_id.in_(player_ids),
+            TTFLScore.ttfl_score.isnot(None),
+            TTFLScore.minutes > 0
+        )
+        .order_by(TTFLScore.player_id, Game.game_date.desc())
+        .all()
+    )
+
+    # Group scores by player
+    player_scores = defaultdict(list)
+    for player_id, ttfl_score, game_date in scores_data:
+        player_scores[player_id].append((ttfl_score, game_date))
+
+    # Calculate averages for each player
+    result = {}
+    for player_id in player_ids:
+        scores = player_scores.get(player_id, [])
+
+        # avg_ttfl: last 15 games (already sorted by date desc)
+        last_15 = [s[0] for s in scores[:15]]
+        avg_ttfl = round(sum(last_15) / len(last_15), 1) if last_15 else 0.0
+
+        # avg_ttfl_l10: last 10 games
+        last_10 = [s[0] for s in scores[:10]]
+        avg_ttfl_l10 = round(sum(last_10) / len(last_10), 1) if last_10 else 0.0
+
+        # avg_ttfl_l30d: games in last 30 days
+        last_30d = [ttfl for ttfl, gd in scores if gd >= cutoff_30d]
+        avg_ttfl_l30d = round(sum(last_30d) / len(last_30d), 1) if last_30d else 0.0
+
+        result[player_id] = {
+            'avg_ttfl': avg_ttfl,
+            'avg_ttfl_l10': avg_ttfl_l10,
+            'avg_ttfl_l30d': avg_ttfl_l30d
+        }
+
+    return result
+
+
 @router.get("/players/tonight")
 def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Get players for a specific date with TTFL stats.
 
-    Args:
-        game_date: Game date in YYYY-MM-DD format (optional, defaults to today)
-
-    Returns:
-        List of players playing on the specified date with:
-        - player_id, name, team, opponent
-        - avg_ttfl: Average TTFL score from recent games
-        - is_eligible: Always True (frontend handles pick tracking)
+    Optimized to use batch queries instead of N+1 pattern.
+    ~3 queries total instead of 900+ queries.
     """
     try:
         # Parse date or default to today
@@ -69,66 +126,78 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
         else:
             target_date = date.today()
 
-        # Get games for the target date
-        games = db.query(Game).filter(Game.game_date == target_date).all()
+        # Query 1: Get games with teams eager-loaded
+        games = (
+            db.query(Game)
+            .options(joinedload(Game.home_team), joinedload(Game.away_team))
+            .filter(Game.game_date == target_date)
+            .all()
+        )
 
         if not games:
             return []
 
+        # Collect team IDs playing tonight
+        team_ids = set()
+        for game in games:
+            team_ids.add(game.home_team_id)
+            team_ids.add(game.away_team_id)
+
+        # Query 2: Get all active players for tonight's teams
+        players = (
+            db.query(Player)
+            .options(joinedload(Player.team))
+            .filter(Player.team_id.in_(team_ids), Player.is_active == True)
+            .all()
+        )
+
+        # Build player lookup by team_id
+        players_by_team = {}
+        for player in players:
+            if player.team_id not in players_by_team:
+                players_by_team[player.team_id] = []
+            players_by_team[player.team_id].append(player)
+
+        # Query 3: Batch calculate all TTFL averages
+        player_ids = [p.id for p in players]
+        averages = _batch_calculate_averages(db, player_ids)
+
+        # Build response (no more queries needed)
         players_tonight = []
 
         for game in games:
-            # Get home team players
-            home_team = db.query(Team).filter(Team.id == game.home_team_id).first()
-            away_team = db.query(Team).filter(Team.id == game.away_team_id).first()
+            home_team = game.home_team
+            away_team = game.away_team
 
             if not home_team or not away_team:
                 continue
 
-            # Get active players from home team
-            home_players = (
-                db.query(Player)
-                .filter(Player.team_id == game.home_team_id, Player.is_active == True)
-                .all()
-            )
-            for player in home_players:
-                avg_ttfl = _calculate_player_avg_ttfl(db, player.id)
-                avg_ttfl_l10 = _calculate_player_avg_ttfl(db, player.id, limit=10)
-                avg_ttfl_l30d = _calculate_player_avg_ttfl_last_days(db, player.id, days=30)
+            # Home team players
+            for player in players_by_team.get(game.home_team_id, []):
+                avgs = averages.get(player.id, {'avg_ttfl': 0.0, 'avg_ttfl_l10': 0.0, 'avg_ttfl_l30d': 0.0})
                 players_tonight.append({
                     'player_id': player.nba_player_id,
                     'name': player.name,
                     'team': home_team.abbreviation,
                     'opponent': away_team.abbreviation,
                     'is_home': True,
-                    'avg_ttfl': avg_ttfl,
-                    'avg_ttfl_l10': avg_ttfl_l10,
-                    'avg_ttfl_l30d': avg_ttfl_l30d,
-                    'is_eligible': True,  # Frontend handles pick tracking
-                    'last_picked_date': None
+                    'avg_ttfl': avgs['avg_ttfl'],
+                    'avg_ttfl_l10': avgs['avg_ttfl_l10'],
+                    'avg_ttfl_l30d': avgs['avg_ttfl_l30d'],
                 })
 
-            # Get active players from away team
-            away_players = (
-                db.query(Player)
-                .filter(Player.team_id == game.away_team_id, Player.is_active == True)
-                .all()
-            )
-            for player in away_players:
-                avg_ttfl = _calculate_player_avg_ttfl(db, player.id)
-                avg_ttfl_l10 = _calculate_player_avg_ttfl(db, player.id, limit=10)
-                avg_ttfl_l30d = _calculate_player_avg_ttfl_last_days(db, player.id, days=30)
+            # Away team players
+            for player in players_by_team.get(game.away_team_id, []):
+                avgs = averages.get(player.id, {'avg_ttfl': 0.0, 'avg_ttfl_l10': 0.0, 'avg_ttfl_l30d': 0.0})
                 players_tonight.append({
                     'player_id': player.nba_player_id,
                     'name': player.name,
                     'team': away_team.abbreviation,
                     'opponent': home_team.abbreviation,
                     'is_home': False,
-                    'avg_ttfl': avg_ttfl,
-                    'avg_ttfl_l10': avg_ttfl_l10,
-                    'avg_ttfl_l30d': avg_ttfl_l30d,
-                    'is_eligible': True,  # Frontend handles pick tracking
-                    'last_picked_date': None
+                    'avg_ttfl': avgs['avg_ttfl'],
+                    'avg_ttfl_l10': avgs['avg_ttfl_l10'],
+                    'avg_ttfl_l30d': avgs['avg_ttfl_l30d'],
                 })
 
         return players_tonight

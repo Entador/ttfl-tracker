@@ -51,15 +51,15 @@ function HomePageContent() {
       return;
     }
 
-    // Validate date is within range (7 days back/forward)
+    // Validate date is within range (±30 days)
     const selectedDate = new Date(dateParam);
     const todayDate = new Date(today);
     const daysDiff = Math.floor(
       (selectedDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    if (daysDiff < -7 || daysDiff > 7) {
-      console.warn("Date out of range (±7 days), using today");
+    if (daysDiff < -30 || daysDiff > 30) {
+      console.warn("Date out of range (±30 days), using today");
       router.replace("/");
       return;
     }
