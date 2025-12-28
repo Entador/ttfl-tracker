@@ -1,16 +1,17 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
-import './globals.css'
+import type { Metadata } from "next";
+import Link from "next/link";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: 'TTFL Tracker',
-  description: 'Track your TTFL player picks and optimize your daily selections',
-}
+  title: "TTFL Tracker",
+  description:
+    "Track your TTFL player picks and optimize your daily selections",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
@@ -61,5 +62,5 @@ export default function RootLayout({
         </footer>
       </body>
     </html>
-  )
+  );
 }

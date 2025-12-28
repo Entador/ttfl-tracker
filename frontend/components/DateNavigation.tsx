@@ -1,14 +1,15 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { getTodayET } from "@/lib/api";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface DateNavigationProps {
-  currentDate: string; // YYYY-MM-DD
+  currentDate: string; // YYYY-MM-DD (in Eastern Time)
 }
 
-// Helpers — LOCAL date only
+// Parse YYYY-MM-DD string to Date object (treating as local date)
 const parseLocalDate = (dateStr: string) => {
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, m - 1, d);
@@ -23,11 +24,12 @@ const toDateKey = (date: Date) =>
 export default function DateNavigation({ currentDate }: DateNavigationProps) {
   const router = useRouter();
 
-  // Parse current date as LOCAL
+  // Parse current date
   const date = parseLocalDate(currentDate);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Use Eastern Time as reference (NBA schedule timezone)
+  const todayET = getTodayET();
+  const today = parseLocalDate(todayET);
 
   // Limits: ±30 days
   const minDate = new Date(today);
@@ -45,14 +47,15 @@ export default function DateNavigation({ currentDate }: DateNavigationProps) {
 
     const dateStr = toDateKey(newDate);
 
-    if (dateStr === toDateKey(today)) {
+    // Navigate to home if it's today in ET, otherwise use date param
+    if (dateStr === todayET) {
       router.push("/");
     } else {
       router.push(`/?date=${dateStr}`);
     }
   };
 
-  const isToday = toDateKey(date) === toDateKey(today);
+  const isToday = currentDate === todayET;
 
   const formatDate = (date: Date): string => {
     if (isToday) return "Today";
