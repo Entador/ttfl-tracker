@@ -35,7 +35,7 @@ export default function RootLayout({
                   href="/"
                   className="px-3 sm:px-4 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                 >
-                  Tonight's Players
+                  Dashboard
                 </Link>
                 <Link
                   href="/history"

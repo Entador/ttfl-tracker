@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { AlertCircle, Calendar, CircleDot, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import DateNavigation from "@/components/DateNavigation";
 import PlayerFilters, {
@@ -106,7 +106,14 @@ export default function PlayersView({
       loadPlayers(currentDate);
       setInitialDateLoaded(currentDate);
     }
-  }, [currentDate, dateParam, router, initialDate, initialDateLoaded, loadPlayers]);
+  }, [
+    currentDate,
+    dateParam,
+    router,
+    initialDate,
+    initialDateLoaded,
+    loadPlayers,
+  ]);
 
   // Load pick from localStorage when date changes
   useEffect(() => {
@@ -149,12 +156,13 @@ export default function PlayersView({
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "avg-desc":
-          if (a.is_eligible !== b.is_eligible) {
+          // Only separate by eligibility when filtering by available/locked
+          if (filterBy !== "all" && a.is_eligible !== b.is_eligible) {
             return a.is_eligible ? -1 : 1;
           }
           return b.avg_ttfl_l10 - a.avg_ttfl_l10;
         case "avg-asc":
-          if (a.is_eligible !== b.is_eligible) {
+          if (filterBy !== "all" && a.is_eligible !== b.is_eligible) {
             return a.is_eligible ? -1 : 1;
           }
           return a.avg_ttfl_l10 - b.avg_ttfl_l10;
@@ -181,9 +189,7 @@ export default function PlayersView({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <CircleDot className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight">
-            {currentDate === initialDate ? "Tonight's Players" : "Players"}
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Pick Dashboard</h1>
         </div>
         <DateNavigation currentDate={currentDate} />
       </div>
@@ -276,10 +282,7 @@ export default function PlayersView({
                 </thead>
                 <tbody className="divide-y">
                   {filteredAndSortedPlayers.map((player) => (
-                    <tr
-                      key={player.player_id}
-                      className="hover:bg-muted/20"
-                    >
+                    <tr key={player.player_id} className="hover:bg-muted">
                       <td className="px-2 py-1.5">
                         <div
                           className={`w-2 h-2 rounded-full ${

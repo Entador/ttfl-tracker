@@ -1,5 +1,5 @@
 from datetime import datetime
-from nba_api.stats.endpoints import playergamelog, scoreboardv2, commonteamroster
+from nba_api.stats.endpoints import playergamelog, scoreboardv2, commonteamroster, leaguedashteamstats
 from nba_api.stats.static import players, teams
 import time
 
@@ -266,3 +266,110 @@ def get_player_by_id(player_id: int) -> dict | None:
     except Exception as e:
         print(f"Error fetching player {player_id}: {e}")
         return None
+
+
+def get_all_team_stats(season: str | None = None) -> list[dict]:
+    """
+    Fetch season stats for all 30 NBA teams.
+
+    Makes 3 API calls to get Base, Advanced, and Opponent stats.
+    Stats are useful for predicting player TTFL potential against each team.
+
+    Args:
+        season: Season string (e.g., '2024-25'). Defaults to current season.
+
+    Returns:
+        List of team stats:
+        [{
+            'nba_team_id': int,
+            'team_name': str,
+            'wins': int,
+            'losses': int,
+            'pace': float,
+            'def_rating': float,
+            'opp_ppg': float,
+            'opp_rpg': float,
+            'opp_apg': float,
+            'opp_efg_pct': float,
+            'opp_tov': float,
+            'opp_stl': float,
+            'opp_blk': float,
+        }]
+    """
+    if season is None:
+        season = get_current_season()
+
+    try:
+        # 1. Fetch Base stats (W, L)
+        time.sleep(0.6)
+        base_stats = leaguedashteamstats.LeagueDashTeamStats(
+            season=season,
+            season_type_all_star='Regular Season',
+            per_mode_detailed='PerGame',
+            measure_type_detailed_defense='Base'
+        )
+        base_df = base_stats.get_data_frames()[0]
+
+        # 2. Fetch Advanced stats (PACE, DEF_RATING)
+        time.sleep(0.6)
+        advanced_stats = leaguedashteamstats.LeagueDashTeamStats(
+            season=season,
+            season_type_all_star='Regular Season',
+            per_mode_detailed='PerGame',
+            measure_type_detailed_defense='Advanced'
+        )
+        advanced_df = advanced_stats.get_data_frames()[0]
+
+        # 3. Fetch Opponent stats (what opponents score against them)
+        time.sleep(0.6)
+        opp_stats = leaguedashteamstats.LeagueDashTeamStats(
+            season=season,
+            season_type_all_star='Regular Season',
+            per_mode_detailed='PerGame',
+            measure_type_detailed_defense='Opponent'
+        )
+        opp_df = opp_stats.get_data_frames()[0]
+
+        # Merge on TEAM_ID
+        # Note: Opponent stats columns are prefixed with OPP_
+        merged = base_df[['TEAM_ID', 'TEAM_NAME', 'W', 'L']].merge(
+            advanced_df[['TEAM_ID', 'PACE', 'DEF_RATING']],
+            on='TEAM_ID'
+        ).merge(
+            opp_df[['TEAM_ID', 'OPP_PTS', 'OPP_REB', 'OPP_AST', 'OPP_FGM', 'OPP_FG3M', 'OPP_FGA', 'OPP_TOV', 'OPP_STL', 'OPP_BLK']],
+            on='TEAM_ID'
+        )
+
+        results = []
+        for _, row in merged.iterrows():
+            # Calculate effective FG%: (FGM + 0.5 * FG3M) / FGA
+            opp_fga = float(row.get('OPP_FGA', 0) or 0)
+            opp_efg = 0.0
+            if opp_fga > 0:
+                opp_fgm = float(row.get('OPP_FGM', 0) or 0)
+                opp_fg3m = float(row.get('OPP_FG3M', 0) or 0)
+                opp_efg = (opp_fgm + 0.5 * opp_fg3m) / opp_fga
+
+            results.append({
+                'nba_team_id': int(row['TEAM_ID']),
+                'team_name': row['TEAM_NAME'],
+                'wins': int(row.get('W', 0) or 0),
+                'losses': int(row.get('L', 0) or 0),
+                'pace': float(row.get('PACE', 0) or 0),
+                'def_rating': float(row.get('DEF_RATING', 0) or 0),
+                'opp_ppg': float(row.get('OPP_PTS', 0) or 0),
+                'opp_rpg': float(row.get('OPP_REB', 0) or 0),
+                'opp_apg': float(row.get('OPP_AST', 0) or 0),
+                'opp_efg_pct': opp_efg,
+                'opp_tov': float(row.get('OPP_TOV', 0) or 0),
+                'opp_stl': float(row.get('OPP_STL', 0) or 0),
+                'opp_blk': float(row.get('OPP_BLK', 0) or 0),
+            })
+
+        return results
+
+    except Exception as e:
+        import traceback
+        print(f"Error fetching team stats: {e}")
+        print(traceback.format_exc())
+        return []
