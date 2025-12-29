@@ -172,7 +172,7 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
             if not home_team or not away_team:
                 continue
 
-            # Home team players
+            # Home team players (opponent is away_team)
             for player in players_by_team.get(game.home_team_id, []):
                 avgs = averages.get(player.id, {'avg_ttfl': 0.0, 'avg_ttfl_l10': 0.0, 'avg_ttfl_l30d': 0.0})
                 players_tonight.append({
@@ -184,9 +184,11 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
                     'avg_ttfl': avgs['avg_ttfl'],
                     'avg_ttfl_l10': avgs['avg_ttfl_l10'],
                     'avg_ttfl_l30d': avgs['avg_ttfl_l30d'],
+                    'opp_pace': away_team.pace,
+                    'opp_def_rating': away_team.def_rating,
                 })
 
-            # Away team players
+            # Away team players (opponent is home_team)
             for player in players_by_team.get(game.away_team_id, []):
                 avgs = averages.get(player.id, {'avg_ttfl': 0.0, 'avg_ttfl_l10': 0.0, 'avg_ttfl_l30d': 0.0})
                 players_tonight.append({
@@ -198,6 +200,8 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
                     'avg_ttfl': avgs['avg_ttfl'],
                     'avg_ttfl_l10': avgs['avg_ttfl_l10'],
                     'avg_ttfl_l30d': avgs['avg_ttfl_l30d'],
+                    'opp_pace': home_team.pace,
+                    'opp_def_rating': home_team.def_rating,
                 })
 
         return players_tonight
@@ -235,13 +239,12 @@ def get_player_stats(player_id: int, db: Session = Depends(get_db)):
         team = db.query(Team).filter(Team.id == player.team_id).first()
         team_abbrev = team.abbreviation if team else ""
 
-        # Get recent games with TTFL scores
+        # Get all season games with TTFL scores
         recent_scores = (
             db.query(TTFLScore, Game)
             .join(Game, TTFLScore.game_id == Game.id)
             .filter(TTFLScore.player_id == player.id)
             .order_by(Game.game_date.desc())
-            .limit(15)
             .all()
         )
 

@@ -183,6 +183,45 @@ export default function PlayersView({
   ).length;
   const lockedCount = playersWithEligibility.length - availableCount;
 
+  // Calculate pace and def_rating ranges for color gradients
+  const statRanges = useMemo(() => {
+    const paces = players.map((p) => p.opp_pace).filter((v): v is number => v !== null);
+    const defRatings = players.map((p) => p.opp_def_rating).filter((v): v is number => v !== null);
+
+    const getStats = (values: number[]) => {
+      if (values.length === 0) return { min: 0, max: 0, median: 0 };
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      return { min: sorted[0], max: sorted[sorted.length - 1], median };
+    };
+
+    return {
+      pace: getStats(paces),
+      defRating: getStats(defRatings),
+    };
+  }, [players]);
+
+  // Get background color based on value position relative to median
+  // Higher is better (green), lower is worse (red), median is transparent
+  function getStatBgColor(value: number | null, stats: { min: number; max: number; median: number }): string {
+    if (value === null || stats.max === stats.min) return "transparent";
+
+    const { min, max, median } = stats;
+
+    if (value >= median) {
+      // Above median: interpolate from transparent (median) to green (max)
+      const ratio = max === median ? 1 : (value - median) / (max - median);
+      const alpha = Math.round(ratio * 0.4 * 100) / 100; // max 40% opacity
+      return `rgba(34, 197, 94, ${alpha})`; // green-500
+    } else {
+      // Below median: interpolate from red (min) to transparent (median)
+      const ratio = median === min ? 1 : (median - value) / (median - min);
+      const alpha = Math.round(ratio * 0.4 * 100) / 100;
+      return `rgba(239, 68, 68, ${alpha})`; // red-500
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -272,12 +311,14 @@ export default function PlayersView({
                 <thead className="border-b bg-muted/30 text-xs">
                   <tr>
                     <th className="w-6 px-2 py-2"></th>
-                    <th className="px-2 py-2 text-left font-medium">Player</th>
-                    <th className="px-2 py-2 text-left font-medium">Match</th>
-                    <th className="px-2 py-2 text-right font-medium">Avg</th>
-                    <th className="px-2 py-2 text-right font-medium">L10</th>
-                    <th className="px-2 py-2 text-right font-medium">30d</th>
-                    <th className="w-16 px-2 py-2"></th>
+                    <th className="whitespace-nowrap px-2 py-2 text-left font-medium">Player</th>
+                    <th className="px-3 py-2 text-left font-medium border-l border-border/50">Opp</th>
+                    <th className="px-3 py-2 text-right font-medium">Pace</th>
+                    <th className="px-3 py-2 text-right font-medium">DRtg</th>
+                    <th className="px-3 py-2 text-right font-medium border-l border-border/50">Avg</th>
+                    <th className="px-3 py-2 text-right font-medium">L10</th>
+                    <th className="px-3 py-2 text-right font-medium">30d</th>
+                    <th className="w-14 px-2 py-2"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -290,7 +331,7 @@ export default function PlayersView({
                           }`}
                         />
                       </td>
-                      <td className="px-2 py-1.5">
+                      <td className="whitespace-nowrap px-2 py-1.5">
                         <Link
                           href={`/players/${player.player_id}`}
                           className="hover:underline"
@@ -301,16 +342,28 @@ export default function PlayersView({
                           </span>
                         </Link>
                       </td>
-                      <td className="px-2 py-1.5 text-muted-foreground">
+                      <td className="px-3 py-1.5 text-muted-foreground border-l border-border/50">
                         {player.is_home ? "vs" : "@"} {player.opponent}
                       </td>
-                      <td className="px-2 py-1.5 text-right text-muted-foreground">
+                      <td
+                        className="px-3 py-1.5 text-right text-muted-foreground tabular-nums"
+                        style={{ backgroundColor: getStatBgColor(player.opp_pace, statRanges.pace) }}
+                      >
+                        {player.opp_pace?.toFixed(1) ?? "-"}
+                      </td>
+                      <td
+                        className="px-3 py-1.5 text-right text-muted-foreground tabular-nums"
+                        style={{ backgroundColor: getStatBgColor(player.opp_def_rating, statRanges.defRating) }}
+                      >
+                        {player.opp_def_rating?.toFixed(1) ?? "-"}
+                      </td>
+                      <td className="px-3 py-1.5 text-right text-muted-foreground border-l border-border/50">
                         {player.avg_ttfl.toFixed(1)}
                       </td>
-                      <td className="px-2 py-1.5 text-right font-semibold">
+                      <td className="px-3 py-1.5 text-right font-semibold">
                         {player.avg_ttfl_l10.toFixed(1)}
                       </td>
-                      <td className="px-2 py-1.5 text-right text-muted-foreground">
+                      <td className="px-3 py-1.5 text-right text-muted-foreground">
                         {player.avg_ttfl_l30d.toFixed(1)}
                       </td>
                       <td className="px-2 py-1.5 text-right">

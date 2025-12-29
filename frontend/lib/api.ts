@@ -20,6 +20,8 @@ export interface Player {
   avg_ttfl: number;
   avg_ttfl_l10: number;
   avg_ttfl_l30d: number;
+  opp_pace: number | null;
+  opp_def_rating: number | null;
 }
 
 export interface PlayerStats {

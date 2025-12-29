@@ -1,5 +1,5 @@
 from datetime import datetime
-from nba_api.stats.endpoints import playergamelog, scoreboardv2, commonteamroster, leaguedashteamstats
+from nba_api.stats.endpoints import playergamelog, scoreboardv2, commonteamroster, leaguedashteamstats, boxscoretraditionalv3
 from nba_api.stats.static import players, teams
 import time
 
@@ -266,6 +266,107 @@ def get_player_by_id(player_id: int) -> dict | None:
     except Exception as e:
         print(f"Error fetching player {player_id}: {e}")
         return None
+
+
+def get_game_box_scores(game_id: str, max_retries: int = 3) -> list[dict]:
+    """
+    Fetch box scores for all players in a specific game.
+
+    Args:
+        game_id: NBA game ID (e.g., '0022400123')
+        max_retries: Maximum retry attempts on timeout
+
+    Returns:
+        List of player box scores:
+        [{
+            'nba_player_id': int,
+            'player_name': str,
+            'team_abbreviation': str,
+            'minutes': int,
+            'PTS': int, 'REB': int, 'AST': int, 'STL': int, 'BLK': int,
+            'TOV': int, 'FGM': int, 'FGA': int, 'FG3M': int, 'FG3A': int,
+            'FTM': int, 'FTA': int
+        }]
+    """
+    for attempt in range(max_retries):
+        try:
+            time.sleep(0.6)  # Rate limiting
+
+            box_score = boxscoretraditionalv3.BoxScoreTraditionalV3(
+                game_id=game_id,
+                timeout=60
+            )
+
+            # PlayerStats contains individual player box scores
+            players_df = box_score.player_stats.get_data_frame()
+
+            if players_df.empty:
+                return []
+
+            def safe_int(val):
+                """Convert to int, handling NaN and None."""
+                if val is None or (isinstance(val, float) and val != val):  # NaN check
+                    return 0
+                try:
+                    return int(val)
+                except (ValueError, TypeError):
+                    return 0
+
+            results = []
+            for _, row in players_df.iterrows():
+                # V3 uses camelCase column names
+                # Parse minutes (format: "PT12M30S" or "12:30" or similar)
+                min_str = row.get('minutes', '') or row.get('MIN', '')
+                minutes = 0
+                if min_str:
+                    min_str = str(min_str)
+                    if ':' in min_str:
+                        try:
+                            minutes = int(min_str.split(':')[0])
+                        except (ValueError, IndexError):
+                            pass
+                    elif 'PT' in min_str and 'M' in min_str:
+                        # ISO duration format: PT12M30S
+                        try:
+                            minutes = int(min_str.split('PT')[1].split('M')[0])
+                        except (ValueError, IndexError):
+                            pass
+
+                results.append({
+                    'nba_player_id': safe_int(row.get('personId') or row.get('PLAYER_ID')),
+                    'player_name': row.get('name', '') or row.get('PLAYER_NAME', ''),
+                    'team_abbreviation': row.get('teamTricode', '') or row.get('TEAM_ABBREVIATION', ''),
+                    'minutes': minutes,
+                    'PTS': safe_int(row.get('points') or row.get('PTS')),
+                    'REB': safe_int(row.get('reboundsTotal') or row.get('REB')),
+                    'AST': safe_int(row.get('assists') or row.get('AST')),
+                    'STL': safe_int(row.get('steals') or row.get('STL')),
+                    'BLK': safe_int(row.get('blocks') or row.get('BLK')),
+                    'TOV': safe_int(row.get('turnovers') or row.get('TOV')),
+                    'FGM': safe_int(row.get('fieldGoalsMade') or row.get('FGM')),
+                    'FGA': safe_int(row.get('fieldGoalsAttempted') or row.get('FGA')),
+                    'FG3M': safe_int(row.get('threePointersMade') or row.get('FG3M')),
+                    'FG3A': safe_int(row.get('threePointersAttempted') or row.get('FG3A')),
+                    'FTM': safe_int(row.get('freeThrowsMade') or row.get('FTM')),
+                    'FTA': safe_int(row.get('freeThrowsAttempted') or row.get('FTA')),
+                })
+
+            return results
+
+        except Exception as e:
+            is_timeout = 'timed out' in str(e).lower() or 'timeout' in str(e).lower()
+            is_last_attempt = attempt == max_retries - 1
+
+            if is_timeout and not is_last_attempt:
+                wait_time = 2 ** attempt
+                print(f"Timeout fetching box scores for game {game_id}, retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait_time)
+                continue
+
+            print(f"Error fetching box scores for game {game_id}: {e}")
+            return []
+
+    return []
 
 
 def get_all_team_stats(season: str | None = None) -> list[dict]:
