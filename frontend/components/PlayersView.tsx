@@ -98,7 +98,10 @@ export default function PlayersView({
         ...player,
         is_eligible: !lastPickedDate,
         last_picked_date: lastPickedDate,
-        days_until_eligible: getDaysUntilEligible(player.player_id, currentDate),
+        days_until_eligible: getDaysUntilEligible(
+          player.player_id,
+          currentDate
+        ),
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,7 +142,14 @@ export default function PlayersView({
       loadPlayers(currentDate);
       setInitialDateLoaded(currentDate);
     }
-  }, [currentDate, dateParam, router, initialDate, initialDateLoaded, loadPlayers]);
+  }, [
+    currentDate,
+    dateParam,
+    router,
+    initialDate,
+    initialDateLoaded,
+    loadPlayers,
+  ]);
 
   // Filter and sort players
   const filteredPlayers = useMemo(() => {
@@ -169,7 +179,9 @@ export default function PlayersView({
     return filtered;
   }, [playersWithEligibility, sortBy, filterBy]);
 
-  const availableCount = playersWithEligibility.filter((p) => p.is_eligible).length;
+  const availableCount = playersWithEligibility.filter(
+    (p) => p.is_eligible
+  ).length;
   const lockedCount = playersWithEligibility.length - availableCount;
 
   return (
@@ -177,8 +189,10 @@ export default function PlayersView({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <CircleDot className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Pick Dashboard</h1>
+          <CircleDot className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+          <h1 className="text-xl sm:text-xl font-bold tracking-tight">
+            Pick Dashboard
+          </h1>
         </div>
         <DateNavigation currentDate={currentDate} />
       </div>

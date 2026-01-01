@@ -18,11 +18,18 @@ body {
 }
 
 /* Typography Scale - Major Third (1.25) */
+/* Mobile-first responsive typography */
 h1 {
-  font-size: 3.052rem;
+  font-size: 1.25rem;
   line-height: 1.1;
   letter-spacing: -0.02em;
   font-weight: 800;
+}
+
+@media (min-width: 640px) {
+  h1 {
+    font-size: 3.052rem;
+  }
 }
 
 h2 {
