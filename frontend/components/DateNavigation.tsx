@@ -78,10 +78,11 @@ export default function DateNavigation({ currentDate }: DateNavigationProps) {
   };
 
   return (
-    <div className="flex items-center gap-3 border border-neutral-500 rounded-2xl p-2">
+    <div className="flex items-center justify-center gap-2 sm:gap-3 border border-neutral-500 rounded-2xl p-1.5 sm:p-2">
       <Button
         variant="outline"
         size="icon"
+        className="h-8 w-8 sm:h-9 sm:w-9"
         onClick={() => navigateDate(-1)}
         disabled={isAtMin}
         aria-label="Previous day"
@@ -89,13 +90,14 @@ export default function DateNavigation({ currentDate }: DateNavigationProps) {
         <ChevronLeft className="h-4 w-4" />
       </Button>
 
-      <div className="min-w-40 text-center">
-        <span className="text-lg font-semibold">{formatDate(date)}</span>
+      <div className="min-w-28 sm:min-w-40 text-center">
+        <span className="text-base sm:text-lg font-semibold">{formatDate(date)}</span>
       </div>
 
       <Button
         variant="outline"
         size="icon"
+        className="h-8 w-8 sm:h-9 sm:w-9"
         onClick={() => navigateDate(1)}
         disabled={isAtMax}
         aria-label="Next day"

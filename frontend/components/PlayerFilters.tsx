@@ -21,6 +21,7 @@ interface PlayerFiltersProps {
   totalCount: number;
   availableCount: number;
   lockedCount: number;
+  isHydrated: boolean;
 }
 
 export default function PlayerFilters({
@@ -31,37 +32,38 @@ export default function PlayerFilters({
   totalCount,
   availableCount,
   lockedCount,
+  isHydrated,
 }: PlayerFiltersProps) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Filter badges */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
         <Badge
           variant={filterBy === 'all' ? 'default' : 'outline'}
-          className="cursor-pointer"
+          className="cursor-pointer shrink-0"
           onClick={() => onFilterChange('all')}
         >
           All: {totalCount}
         </Badge>
         <Badge
           variant={filterBy === 'available' ? 'success' : 'outline'}
-          className="cursor-pointer"
+          className="cursor-pointer shrink-0"
           onClick={() => onFilterChange('available')}
         >
-          Available: {availableCount}
+          Available: {isHydrated ? availableCount : '—'}
         </Badge>
         <Badge
           variant={filterBy === 'locked' ? 'destructive' : 'outline'}
-          className="cursor-pointer"
+          className="cursor-pointer shrink-0"
           onClick={() => onFilterChange('locked')}
         >
-          Locked: {lockedCount}
+          Locked: {isHydrated ? lockedCount : '—'}
         </Badge>
       </div>
 
       {/* Sort dropdown */}
       <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortOption)}>
-        <SelectTrigger className="w-44 h-9">
+        <SelectTrigger className="w-full sm:w-44 h-9">
           <div className="flex items-center gap-2">
             <SortAsc className="h-4 w-4 text-muted-foreground" />
             <SelectValue />

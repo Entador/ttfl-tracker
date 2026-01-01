@@ -21,10 +21,35 @@ Options:
 import sys
 import argparse
 import traceback
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+from functools import wraps
 
 import pandas as pd
+
+
+def retry_on_timeout(max_retries: int = 3, base_delay: float = 5.0):
+    """Decorator to retry NBA API calls on timeout with exponential backoff."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    error_str = str(e).lower()
+                    if "timeout" in error_str or "timed out" in error_str:
+                        last_exception = e
+                        delay = base_delay * (2 ** attempt)
+                        print(f"  Timeout (attempt {attempt + 1}/{max_retries}), retrying in {delay}s...")
+                        time.sleep(delay)
+                    else:
+                        raise
+            raise last_exception
+        return wrapper
+    return decorator
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -61,12 +86,16 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
     season = get_current_season()
     print(f"Season: {season}")
 
-    try:
+    @retry_on_timeout(max_retries=3, base_delay=10.0)
+    def fetch_schedule():
         schedule = scheduleleaguev2.ScheduleLeagueV2(
             season=season,
             league_id="00",
         )
-        games_df = schedule.season_games.get_data_frame()
+        return schedule.season_games.get_data_frame()
+
+    try:
+        games_df = fetch_schedule()
     except Exception as e:
         print(f"ERROR fetching schedule: {e}")
         return 0
@@ -353,7 +382,15 @@ def update_team_stats(db: Session, dry_run: bool = False) -> int:
     print(f"Season: {season}")
     print("Fetching team stats from NBA API...")
 
-    team_stats = get_all_team_stats(season)
+    @retry_on_timeout(max_retries=3, base_delay=10.0)
+    def fetch_team_stats():
+        return get_all_team_stats(season)
+
+    try:
+        team_stats = fetch_team_stats()
+    except Exception as e:
+        print(f"ERROR fetching team stats: {e}")
+        return 0
 
     if not team_stats:
         print("ERROR: No team stats returned from API")
