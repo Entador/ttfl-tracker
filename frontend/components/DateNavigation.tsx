@@ -78,7 +78,7 @@ export default function DateNavigation({ currentDate }: DateNavigationProps) {
   };
 
   return (
-    <div className="flex items-center justify-center gap-2 sm:gap-3 border border-neutral-500 rounded-2xl p-1.5 sm:p-2">
+    <div className="flex items-center justify-center gap-2 sm:gap-3 border-2 border-input rounded-2xl p-1.5 sm:p-2">
       <Button
         variant="outline"
         size="icon"
@@ -91,7 +91,9 @@ export default function DateNavigation({ currentDate }: DateNavigationProps) {
       </Button>
 
       <div className="min-w-28 sm:min-w-40 text-center">
-        <span className="text-base sm:text-lg font-semibold">{formatDate(date)}</span>
+        <span className="text-base sm:text-lg font-semibold">
+          {formatDate(date)}
+        </span>
       </div>
 
       <Button

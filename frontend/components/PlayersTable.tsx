@@ -4,9 +4,9 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { FilterOption } from "@/components/PlayerFilters";
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/api";
-import { FilterOption } from "@/components/PlayerFilters";
 
 export interface PlayerWithEligibility extends Player {
   is_eligible: boolean;
@@ -97,21 +97,54 @@ export default function PlayersTable({
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       )}
+
+      {/* Table Layout */}
       <div className="overflow-x-auto border rounded-lg">
         <table className="w-full text-sm">
-          <thead className="border-b bg-muted/30 text-xs">
-            <tr>
-              <th className={`w-8 px-2 py-2 ${hideEligibilityOnMobile ? "hidden sm:table-cell" : ""}`}></th>
-              <th className={`whitespace-nowrap pr-2 py-2 text-left font-medium ${hideEligibilityOnMobile ? "pl-2 sm:pl-0" : "pl-0"}`}>
+          <thead className="text-xs">
+            {/* Group headers row */}
+            <tr className="bg-muted/40">
+              <th
+                className={`${
+                  hideEligibilityOnMobile ? "hidden sm:table-cell" : ""
+                }`}
+              ></th>
+              <th className="border-transparent border-0"></th>
+              <th
+                className="px-3 py-2 text-center font-semibold uppercase tracking-wide text-red-500 border-l-[3px] border-red-400/50"
+                colSpan={3}
+              >
+                Opponent
+              </th>
+              <th
+                className="px-3 py-2 text-center font-semibold uppercase tracking-wide text-primary border-l-[3px] border-primary/50"
+                colSpan={3}
+              >
+                TTFL
+              </th>
+              <th></th>
+            </tr>
+            {/* Column headers row */}
+            <tr className="border-b bg-muted/20">
+              <th
+                className={`w-8 px-2 py-2 ${
+                  hideEligibilityOnMobile ? "hidden sm:table-cell" : ""
+                }`}
+              ></th>
+              <th
+                className={`whitespace-nowrap pr-2 py-2 text-left font-medium ${
+                  hideEligibilityOnMobile ? "pl-2 sm:pl-0" : "pl-0"
+                }`}
+              >
                 Player
               </th>
-              <th className="px-3 py-2 text-left font-medium border-l-2 border-red-300/30">
-                Opp
+              <th className="px-3 py-2 text-left font-medium border-l-[3px] border-red-400/50">
+                Matchup
               </th>
               <th className="px-3 py-2 text-right font-medium">Pace</th>
-              <th className="px-3 py-2 text-right font-medium border-r-2 border-red-300/30">DRtg</th>
-              <th className="px-3 py-2 text-right font-medium">
-                Avg
+              <th className="px-3 py-2 text-right font-medium">DRtg</th>
+              <th className="px-3 py-2 text-right font-medium border-l-[3px] border-primary/50">
+                Season
               </th>
               <th className="px-3 py-2 text-right font-medium">L10</th>
               <th className="px-3 py-2 text-right font-medium">30d</th>
@@ -120,21 +153,32 @@ export default function PlayersTable({
           </thead>
           <tbody className="divide-y">
             {players.map((player) => (
-              <tr key={player.player_id} className="hover:bg-muted">
-                <td className={`w-8 px-2 py-1.5 ${hideEligibilityOnMobile ? "hidden sm:table-cell" : ""}`}>
+              <tr
+                key={player.player_id}
+                className="hover:bg-muted/50 transition-colors"
+              >
+                <td
+                  className={`w-8 px-2 py-2 ${
+                    hideEligibilityOnMobile ? "hidden sm:table-cell" : ""
+                  }`}
+                >
                   <div className="flex justify-center">
                     <div
                       className={`w-2 h-2 rounded-full ${
                         !isHydrated
                           ? "bg-muted-foreground/30"
                           : player.is_eligible
-                            ? "bg-success"
-                            : "bg-destructive"
+                          ? "bg-success"
+                          : "bg-destructive"
                       }`}
                     />
                   </div>
                 </td>
-                <td className={`whitespace-nowrap pr-2 py-1.5 ${hideEligibilityOnMobile ? "pl-2 sm:pl-0" : "pl-0"}`}>
+                <td
+                  className={`whitespace-nowrap pr-2 py-2 ${
+                    hideEligibilityOnMobile ? "pl-2 sm:pl-0" : "pl-0"
+                  }`}
+                >
                   <Link
                     href={`/players/${player.player_id}`}
                     className="hover:underline"
@@ -145,11 +189,11 @@ export default function PlayersTable({
                     </span>
                   </Link>
                 </td>
-                <td className="whitespace-nowrap px-3 py-1.5 text-muted-foreground border-l-2 border-red-300/30">
+                <td className="whitespace-nowrap px-3 py-2 text-muted-foreground border-l-[3px] border-red-400/50 bg-red-500/3">
                   {player.is_home ? "vs" : "@"} {player.opponent}
                 </td>
                 <td
-                  className="px-3 py-1.5 text-right text-muted-foreground tabular-nums"
+                  className="px-3 py-2 text-right text-muted-foreground tabular-nums bg-red-500/3"
                   style={{
                     backgroundColor: getStatBgColor(
                       player.opp_pace,
@@ -160,7 +204,7 @@ export default function PlayersTable({
                   {player.opp_pace?.toFixed(1) ?? "-"}
                 </td>
                 <td
-                  className="px-3 py-1.5 text-right text-muted-foreground tabular-nums border-r-2 border-red-300/30"
+                  className="px-3 py-2 text-right text-muted-foreground tabular-nums bg-red-500/3"
                   style={{
                     backgroundColor: getStatBgColor(
                       player.opp_def_rating,
@@ -170,16 +214,16 @@ export default function PlayersTable({
                 >
                   {player.opp_def_rating?.toFixed(1) ?? "-"}
                 </td>
-                <td className="px-3 py-1.5 text-right text-muted-foreground">
+                <td className="px-3 py-2 text-right text-muted-foreground tabular-nums border-l-[3px] border-primary/50 bg-primary/3">
                   {player.avg_ttfl.toFixed(1)}
                 </td>
-                <td className="px-3 py-1.5 text-right font-semibold">
+                <td className="px-3 py-2 text-right font-semibold tabular-nums bg-primary/3">
                   {player.avg_ttfl_l10.toFixed(1)}
                 </td>
-                <td className="px-3 py-1.5 text-right text-muted-foreground">
+                <td className="px-3 py-2 text-right text-muted-foreground tabular-nums bg-primary/3">
                   {player.avg_ttfl_l30d.toFixed(1)}
                 </td>
-                <td className="px-2 py-1.5 text-right">
+                <td className="px-2 py-2 text-right">
                   {!isHydrated ? (
                     <span className="text-xs text-muted-foreground">—</span>
                   ) : currentPick === player.player_id ? (
@@ -200,7 +244,7 @@ export default function PlayersTable({
                       Pick
                     </Button>
                   ) : (
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground tabular-nums">
                       {player.days_until_eligible}d
                     </span>
                   )}
