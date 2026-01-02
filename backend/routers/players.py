@@ -186,6 +186,8 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
                     'avg_ttfl_l30d': avgs['avg_ttfl_l30d'],
                     'opp_pace': away_team.pace,
                     'opp_def_rating': away_team.def_rating,
+                    'injury_status': player.injury_status,
+                    'injury_return_date': player.injury_return_date,
                 })
 
             # Away team players (opponent is home_team)
@@ -202,6 +204,8 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
                     'avg_ttfl_l30d': avgs['avg_ttfl_l30d'],
                     'opp_pace': home_team.pace,
                     'opp_def_rating': home_team.def_rating,
+                    'injury_status': player.injury_status,
+                    'injury_return_date': player.injury_return_date,
                 })
 
         return players_tonight

@@ -40,6 +40,10 @@ class Player(Base):
     team_id = Column(Integer, ForeignKey("teams.id"))
     is_active = Column(Boolean, default=True)
 
+    # Injury status from ESPN
+    injury_status = Column(String(20), nullable=True)
+    injury_return_date = Column(String(20), nullable=True)
+
     team = relationship("Team", back_populates="players")
     ttfl_scores = relationship("TTFLScore", back_populates="player", cascade="all, delete-orphan")
 

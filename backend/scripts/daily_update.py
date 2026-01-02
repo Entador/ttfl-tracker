@@ -5,6 +5,7 @@ Maintains the database by:
 1. Updating game statuses (scheduled -> final)
 2. Populating TTFL scores for completed games
 3. Updating team defensive stats
+4. Updating player injury statuses from ESPN
 
 Designed to run daily via GitHub Actions cron job.
 
@@ -12,10 +13,11 @@ Usage:
     poetry run python scripts/daily_update.py
 
 Options:
-    --games-only    Only update game statuses
-    --scores-only   Only populate TTFL scores
-    --stats-only    Only update team stats
-    --dry-run       Show what would be done without making changes
+    --games-only      Only update game statuses
+    --scores-only     Only populate TTFL scores
+    --stats-only      Only update team stats
+    --injuries-only   Only update injury statuses
+    --dry-run         Show what would be done without making changes
 """
 
 import sys
@@ -61,6 +63,7 @@ from models.database import SessionLocal
 from models import Team, Player, Game, TTFLScore
 from services.nba_api import get_current_season, get_all_team_stats, get_game_box_scores, get_player_stats, get_proxy_url
 from services.ttfl import calculate_ttfl_score
+from services.injuries import update_player_injuries
 
 
 def get_db() -> Session:
@@ -439,15 +442,54 @@ def update_team_stats(db: Session, dry_run: bool = False) -> int:
     return updated_count
 
 
+def update_injuries(db: Session, dry_run: bool = False) -> dict:
+    """
+    Update player injury status from ESPN.
+
+    Returns:
+        Dict with update stats
+    """
+    print("\n" + "=" * 50)
+    print("Phase 4: Update Player Injuries")
+    print("=" * 50)
+
+    print("Fetching injury data from ESPN...")
+
+    if dry_run:
+        print("*** DRY RUN - Would update injuries from ESPN ***")
+        return {"updated": 0, "cleared": 0, "not_found": []}
+
+    try:
+        result = update_player_injuries(db)
+
+        print(f"\nResults:")
+        print(f"  Updated: {result['updated']}")
+        print(f"  Cleared: {result['cleared']}")
+        if result['not_found']:
+            print(f"  Not matched: {len(result['not_found'])} players")
+            for name in result['not_found'][:5]:  # Show first 5
+                print(f"    - {name}")
+            if len(result['not_found']) > 5:
+                print(f"    ... and {len(result['not_found']) - 5} more")
+
+        return result
+
+    except Exception as e:
+        print(f"ERROR updating injuries: {e}")
+        traceback.print_exc()
+        return {"updated": 0, "cleared": 0, "not_found": [], "error": str(e)}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Daily TTFL database update")
     parser.add_argument("--games-only", action="store_true", help="Only update game statuses")
     parser.add_argument("--scores-only", action="store_true", help="Only populate TTFL scores")
     parser.add_argument("--stats-only", action="store_true", help="Only update team stats")
+    parser.add_argument("--injuries-only", action="store_true", help="Only update injury statuses")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done without making changes")
     args = parser.parse_args()
 
-    run_all = not any([args.games_only, args.scores_only, args.stats_only])
+    run_all = not any([args.games_only, args.scores_only, args.stats_only, args.injuries_only])
 
     print("=" * 50)
     print("TTFL Daily Update Script")
@@ -470,6 +512,10 @@ def main():
         # Phase 3: Update team stats
         if run_all or args.stats_only:
             update_team_stats(db, dry_run=args.dry_run)
+
+        # Phase 4: Update injuries
+        if run_all or args.injuries_only:
+            update_injuries(db, dry_run=args.dry_run)
 
         print("\n" + "=" * 50)
         print(f"Completed: {datetime.now(timezone.utc).isoformat()}")

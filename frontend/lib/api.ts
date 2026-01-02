@@ -22,6 +22,8 @@ export interface Player {
   avg_ttfl_l30d: number;
   opp_pace: number | null;
   opp_def_rating: number | null;
+  injury_status: string | null;
+  injury_return_date: string | null;
 }
 
 export interface PlayerStats {

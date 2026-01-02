@@ -5,8 +5,27 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { FilterOption } from "@/components/PlayerFilters";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/api";
+
+function InjuryBadge({ status, returnDate }: { status: string | null; returnDate: string | null }) {
+  if (!status) return null;
+
+  const isOut = status.toLowerCase() === "out";
+  const label = isOut ? "OUT" : "GTD";
+  const variant = isOut ? "destructive" : "warning";
+
+  return (
+    <Badge
+      variant={variant}
+      className="px-1.5 py-0 text-[10px] leading-4"
+      title={returnDate ? `Return: ${returnDate}` : undefined}
+    >
+      {label}
+    </Badge>
+  );
+}
 
 export interface PlayerWithEligibility extends Player {
   is_eligible: boolean;
@@ -88,7 +107,7 @@ export default function PlayersTable({
   onRemovePick,
 }: PlayersTableProps) {
   const statRanges = useStatRanges(players);
-  const hideEligibilityOnMobile = filterBy === "available";
+  const hideEligibility = filterBy === "available";
 
   return (
     <div className="relative">
@@ -104,11 +123,8 @@ export default function PlayersTable({
           <thead className="text-xs">
             {/* Group headers row */}
             <tr className="bg-muted/40">
-              <th
-                className={`${
-                  hideEligibilityOnMobile ? "hidden sm:table-cell" : ""
-                }`}
-              ></th>
+              <th className={hideEligibility ? "hidden" : ""}></th>
+              <th></th>
               <th className="border-transparent border-0"></th>
               <th
                 className="px-3 py-2 text-center font-semibold uppercase tracking-wide text-red-500 border-l-[3px] border-red-400/50"
@@ -127,15 +143,10 @@ export default function PlayersTable({
             {/* Column headers row */}
             <tr className="border-b bg-muted/20">
               <th
-                className={`w-8 px-2 py-2 ${
-                  hideEligibilityOnMobile ? "hidden sm:table-cell" : ""
-                }`}
+                className={`w-8 px-2 py-2 ${hideEligibility ? "hidden" : ""}`}
               ></th>
-              <th
-                className={`whitespace-nowrap pr-2 py-2 text-left font-medium ${
-                  hideEligibilityOnMobile ? "pl-2 sm:pl-0" : "pl-0"
-                }`}
-              >
+              <th className="w-10 px-1 py-2"></th>
+              <th className="whitespace-nowrap pr-2 py-2 text-left font-medium">
                 Player
               </th>
               <th className="px-3 py-2 text-left font-medium border-l-[3px] border-red-400/50">
@@ -158,9 +169,7 @@ export default function PlayersTable({
                 className="hover:bg-muted/50 transition-colors"
               >
                 <td
-                  className={`w-8 px-2 py-2 ${
-                    hideEligibilityOnMobile ? "hidden sm:table-cell" : ""
-                  }`}
+                  className={`w-8 px-2 py-2 ${hideEligibility ? "hidden" : ""}`}
                 >
                   <div className="flex justify-center">
                     <div
@@ -174,11 +183,10 @@ export default function PlayersTable({
                     />
                   </div>
                 </td>
-                <td
-                  className={`whitespace-nowrap pr-2 py-2 ${
-                    hideEligibilityOnMobile ? "pl-2 sm:pl-0" : "pl-0"
-                  }`}
-                >
+                <td className="w-10 px-1 py-2">
+                  <InjuryBadge status={player.injury_status} returnDate={player.injury_return_date} />
+                </td>
+                <td className="whitespace-nowrap pr-2 py-2">
                   <Link
                     href={`/players/${player.player_id}`}
                     className="hover:underline"
