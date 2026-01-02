@@ -1,7 +1,22 @@
+import os
+import time
 from datetime import datetime
+
 from nba_api.stats.endpoints import playergamelog, scoreboardv2, commonteamroster, leaguedashteamstats, boxscoretraditionalv3
 from nba_api.stats.static import players, teams
-import time
+
+
+def get_proxy_url() -> str | None:
+    """
+    Get proxy URL from environment variable.
+
+    Expected env var:
+        PROXY_URL (e.g., 'http://user:pass@ip:port')
+
+    Returns:
+        Proxy URL string or None if not configured.
+    """
+    return os.getenv('PROXY_URL')
 
 
 def get_todays_games(game_date: str | None = None) -> list[dict]:
@@ -30,7 +45,9 @@ def get_todays_games(game_date: str | None = None) -> list[dict]:
         # Use ScoreboardV2 for date support
         board = scoreboardv2.ScoreboardV2(
             game_date=game_date,
-            league_id='00'  # NBA
+            league_id='00',  # NBA
+            proxy=get_proxy_url(),
+            timeout=60
         )
 
         # Get game data from ScoreboardV2
@@ -91,7 +108,9 @@ def get_active_players_in_game(team_tricode: str) -> list[dict]:
         # Fetch actual roster from NBA API
         roster = commonteamroster.CommonTeamRoster(
             team_id=team['id'],
-            season=get_current_season()
+            season=get_current_season(),
+            proxy=get_proxy_url(),
+            timeout=60
         )
         roster_df = roster.common_team_roster.get_data_frame()
 
@@ -140,7 +159,8 @@ def get_player_stats(player_id: int, num_recent_games: int = 10, max_retries: in
             gamelog = playergamelog.PlayerGameLog(
                 player_id=player_id,
                 season=current_season,
-                timeout=60  # Increase timeout to 60 seconds
+                proxy=get_proxy_url(),
+                timeout=60
             )
 
             games_df = gamelog.get_data_frames()[0]
@@ -294,6 +314,7 @@ def get_game_box_scores(game_id: str, max_retries: int = 3) -> list[dict]:
 
             box_score = boxscoretraditionalv3.BoxScoreTraditionalV3(
                 game_id=game_id,
+                proxy=get_proxy_url(),
                 timeout=60
             )
 
@@ -407,7 +428,9 @@ def get_all_team_stats(season: str | None = None) -> list[dict]:
             season=season,
             season_type_all_star='Regular Season',
             per_mode_detailed='PerGame',
-            measure_type_detailed_defense='Base'
+            measure_type_detailed_defense='Base',
+            proxy=get_proxy_url(),
+            timeout=60
         )
         base_df = base_stats.get_data_frames()[0]
 
@@ -417,7 +440,9 @@ def get_all_team_stats(season: str | None = None) -> list[dict]:
             season=season,
             season_type_all_star='Regular Season',
             per_mode_detailed='PerGame',
-            measure_type_detailed_defense='Advanced'
+            measure_type_detailed_defense='Advanced',
+            proxy=get_proxy_url(),
+            timeout=60
         )
         advanced_df = advanced_stats.get_data_frames()[0]
 
@@ -427,7 +452,9 @@ def get_all_team_stats(season: str | None = None) -> list[dict]:
             season=season,
             season_type_all_star='Regular Season',
             per_mode_detailed='PerGame',
-            measure_type_detailed_defense='Opponent'
+            measure_type_detailed_defense='Opponent',
+            proxy=get_proxy_url(),
+            timeout=60
         )
         opp_df = opp_stats.get_data_frames()[0]
 

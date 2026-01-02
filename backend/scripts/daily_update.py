@@ -59,7 +59,7 @@ from nba_api.stats.endpoints import scheduleleaguev2
 
 from models.database import SessionLocal
 from models import Team, Player, Game, TTFLScore
-from services.nba_api import get_current_season, get_all_team_stats, get_game_box_scores, get_player_stats
+from services.nba_api import get_current_season, get_all_team_stats, get_game_box_scores, get_player_stats, get_proxy_url
 from services.ttfl import calculate_ttfl_score
 
 
@@ -91,6 +91,8 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
         schedule = scheduleleaguev2.ScheduleLeagueV2(
             season=season,
             league_id="00",
+            proxy=get_proxy_url(),
+            timeout=60
         )
         return schedule.season_games.get_data_frame()
 
