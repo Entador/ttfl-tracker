@@ -37,6 +37,17 @@ jobs:
         working-directory: backend
         run: poetry install --no-interaction
 
+      - name: Check secrets are set
+        env:
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+        run: |
+          if [ -z "$PROXY_URL" ]; then
+            echo "ERROR: PROXY_URL secret is not set!"
+            exit 1
+          else
+            echo "PROXY_URL is configured (length: ${#PROXY_URL})"
+          fi
+
       - name: Run daily update script
         working-directory: backend
         env:
