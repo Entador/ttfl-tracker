@@ -1,0 +1,6 @@
+#!/bin/bash
+
+# Auto-generate requirements.txt from Poetry before each commit
+cd backend
+poetry export --without-hashes -o requirements.txt
+git add requirements.txt

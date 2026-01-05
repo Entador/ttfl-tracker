@@ -29,7 +29,7 @@ TTFL_SCORE = POSITIVE - NEGATIVE
 poetry install
 
 # Run development server
-poetry run uvicorn main:app --reload
+poetry run uvicorn app:app --reload
 # API runs on http://localhost:8000
 # API docs at http://localhost:8000/docs
 
@@ -70,7 +70,7 @@ pnpm lint
 
 ```
 backend/
-├── main.py                 # FastAPI app, CORS config, router registration
+├── app.py                  # FastAPI app, CORS config, router registration
 ├── models/
 │   ├── database.py         # SQLAlchemy engine, SessionLocal, get_db()
 │   └── __init__.py         # Player and Game models

@@ -124,7 +124,7 @@ ttfl-tracker/
 │       └── EligibilityBadge.tsx
 │
 ├── backend/                  # FastAPI
-│   ├── main.py              # API entrypoint
+│   ├── app.py               # API entrypoint
 │   ├── routers/
 │   │   ├── players.py
 │   │   └── games.py

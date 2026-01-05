@@ -110,7 +110,7 @@ CREATE INDEX idx_games_picked ON games(picked);
 
 ```bash
 cd backend
-poetry run uvicorn main:app --reload
+poetry run uvicorn app:app --reload
 ```
 
 Visit: http://localhost:8000/docs to see the API documentation
@@ -250,7 +250,7 @@ Once everything is working:
 ```
 ttfl-tracker/
 ├── backend/
-│   ├── main.py                 # FastAPI app
+│   ├── app.py                  # FastAPI app
 │   ├── pyproject.toml          # Poetry deps
 │   ├── models/
 │   │   ├── database.py         # DB setup
@@ -286,7 +286,7 @@ ttfl-tracker/
 ```bash
 cd backend
 poetry install
-poetry run uvicorn main:app --reload
+poetry run uvicorn app:app --reload
 ```
 
 **Terminal 2 (Frontend):**
