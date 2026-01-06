@@ -84,11 +84,18 @@ def scrape_espn_injuries() -> list[dict]:
                 # Return date: "Jan 15", "Week-to-week", etc.
                 return_date = injury.get("date", "")
 
+                # Injury details from description field (ESPN's full injury report)
+                # Don't store generic status as details to avoid duplication
+                details = injury.get("description", "")
+                if details.lower() in ["out", "day-to-day", status_desc.lower()]:
+                    details = ""
+
                 injuries.append({
                     "name": player_name,
                     "team": team_name,
                     "status": status,
                     "return_date": return_date,
+                    "details": details,
                 })
 
         return injuries
@@ -166,15 +173,22 @@ def update_player_injuries(db: Session) -> dict:
                 matched_injury_keys.add((normalize_name(injury["name"]), normalize_name(injury["team"])))
 
         if injury:
-            if player.injury_status != injury["status"] or player.injury_return_date != injury["return_date"]:
+            # Store empty string as None for consistency
+            new_details = injury["details"] if injury["details"] else None
+
+            if (player.injury_status != injury["status"] or
+                player.injury_return_date != injury["return_date"] or
+                player.injury_details != new_details):
                 player.injury_status = injury["status"]
                 player.injury_return_date = injury["return_date"]
+                player.injury_details = new_details
                 updated_count += 1
         else:
             # Player not injured - clear status if they had one
             if player.injury_status is not None:
                 player.injury_status = None
                 player.injury_return_date = None
+                player.injury_details = None
                 cleared_count += 1
 
     # Find injuries that didn't match any player in DB

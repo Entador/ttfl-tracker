@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Calendar, CircleDot } from "lucide-react";
+import { AlertCircle, Calendar } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -12,6 +12,7 @@ import PlayerFilters, {
 import PlayersTable from "@/components/PlayersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getTonightsPlayers, Player } from "@/lib/api";
 import {
   getDaysUntilEligible,
@@ -20,6 +21,103 @@ import {
   removePick,
   savePick,
 } from "@/lib/picks";
+
+function FiltersSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Filter badges skeleton */}
+      <div className="flex gap-2 pb-1 sm:pb-0">
+        <Skeleton className="h-6 w-24 rounded-full bg-blue-200/50" />
+        <Skeleton className="h-6 w-16 rounded-full bg-blue-200/50" />
+        <Skeleton className="h-6 w-20 rounded-full bg-blue-200/50" />
+      </div>
+
+      {/* Sort dropdown skeleton */}
+      <Skeleton className="h-9 w-full sm:w-44 rounded-md bg-blue-200/50" />
+    </div>
+  );
+}
+
+function TableSkeleton() {
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="text-xs">
+          {/* Group headers row */}
+          <tr className="bg-muted/40">
+            <th></th>
+            <th className="border-transparent border-0"></th>
+            <th
+              className="px-3 py-2 text-center font-semibold uppercase tracking-wide text-red-500 border-l-[3px] border-red-400/50"
+              colSpan={3}
+            >
+              Opponent
+            </th>
+            <th
+              className="px-3 py-2 text-center font-semibold uppercase tracking-wide text-primary border-l-[3px] border-primary/50"
+              colSpan={3}
+            >
+              TTFL
+            </th>
+            <th></th>
+          </tr>
+          {/* Column headers row */}
+          <tr className="border-b bg-muted/20">
+            <th className="w-10 px-1 py-2"></th>
+            <th className="whitespace-nowrap pr-2 py-2 text-left font-medium">
+              Player
+            </th>
+            <th className="px-3 py-2 text-left font-medium border-l-[3px] border-red-400/50">
+              Matchup
+            </th>
+            <th className="px-3 py-2 text-right font-medium">Pace</th>
+            <th className="px-3 py-2 text-right font-medium">DRtg</th>
+            <th className="px-3 py-2 text-right font-medium border-l-[3px] border-primary/50">
+              Season
+            </th>
+            <th className="px-3 py-2 text-right font-medium">L10</th>
+            <th className="px-3 py-2 text-right font-medium">30d</th>
+            <th className="w-14 px-2 py-2"></th>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <tr key={i}>
+              <td className="w-10 pl-3 pr-2 py-2"></td>
+              <td className="whitespace-nowrap pr-2 py-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-8 rounded-full bg-blue-200/50" />
+                  <Skeleton className="h-4 w-32 bg-blue-200/50" />
+                </div>
+              </td>
+              <td className="px-3 py-3 border-l-[3px] border-red-400/50 bg-red-500/3">
+                <Skeleton className="h-4 w-12 ml-auto bg-blue-200/50" />
+              </td>
+              <td className="px-3 py-3 bg-red-500/3">
+                <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
+              </td>
+              <td className="px-3 py-3 bg-red-500/3">
+                <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
+              </td>
+              <td className="px-3 py-3 border-l-[3px] border-primary/50 bg-primary/3">
+                <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
+              </td>
+              <td className="px-3 py-3 bg-primary/3">
+                <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
+              </td>
+              <td className="px-3 py-3 bg-primary/3">
+                <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
+              </td>
+              <td className="px-2 py-3">
+                <Skeleton className="h-6 w-12 ml-auto rounded bg-blue-200/50" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 interface PlayersViewProps {
   initialPlayers: Player[];
@@ -51,7 +149,7 @@ export default function PlayersView({
 
   // Filter/sort state
   const [sortBy, setSortBy] = useState<SortOption>("avg-desc");
-  const [filterBy, setFilterBy] = useState<FilterOption>("all");
+  const [filterBy, setFilterBy] = useState<FilterOption>("available");
 
   // Hydration + pick state (localStorage not available on server)
   const [isHydrated, setIsHydrated] = useState(false);
@@ -179,17 +277,19 @@ export default function PlayersView({
     return filtered;
   }, [playersWithEligibility, sortBy, filterBy]);
 
-  const availableCount = playersWithEligibility.filter(
-    (p) => p.is_eligible
-  ).length;
-  const lockedCount = playersWithEligibility.length - availableCount;
+  const availableCount = isHydrated
+    ? playersWithEligibility.filter((p) => p.is_eligible).length
+    : null;
+
+  const lockedCount = isHydrated
+    ? playersWithEligibility.filter((p) => !p.is_eligible).length
+    : null;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <CircleDot className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
           <h1 className="text-xl sm:text-xl font-bold tracking-tight">
             Pick Dashboard
           </h1>
@@ -236,34 +336,40 @@ export default function PlayersView({
         </Card>
       )}
 
+      <PlayerFilters
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        filterBy={filterBy}
+        onFilterChange={setFilterBy}
+        totalCount={players.length ?? null}
+        availableCount={availableCount}
+        lockedCount={lockedCount}
+      />
+
       {/* Players list */}
       {!error && players.length > 0 && (
         <>
-          <PlayerFilters
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-            filterBy={filterBy}
-            onFilterChange={setFilterBy}
-            totalCount={players.length}
-            availableCount={availableCount}
-            lockedCount={lockedCount}
-            isHydrated={isHydrated}
-          />
-
-          {filteredPlayers.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground py-4">
-              No players match filters
-            </p>
+          {!isHydrated ? (
+            <>
+              <TableSkeleton />
+            </>
           ) : (
-            <PlayersTable
-              players={filteredPlayers}
-              currentPick={currentPick}
-              isHydrated={isHydrated}
-              loading={loading}
-              filterBy={filterBy}
-              onPickPlayer={handlePickPlayer}
-              onRemovePick={handleRemovePick}
-            />
+            <>
+              {filteredPlayers.length === 0 ? (
+                <p className="text-center text-sm text-muted-foreground py-4">
+                  No players match filters
+                </p>
+              ) : (
+                <PlayersTable
+                  players={filteredPlayers}
+                  currentPick={currentPick}
+                  isHydrated={isHydrated}
+                  loading={loading}
+                  onPickPlayer={handlePickPlayer}
+                  onRemovePick={handleRemovePick}
+                />
+              )}
+            </>
           )}
         </>
       )}

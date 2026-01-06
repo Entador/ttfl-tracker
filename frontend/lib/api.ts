@@ -24,6 +24,7 @@ export interface Player {
   opp_def_rating: number | null;
   injury_status: string | null;
   injury_return_date: string | null;
+  injury_details: string | null;
 }
 
 export interface PlayerStats {

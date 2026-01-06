@@ -1,5 +1,7 @@
+import { Clock } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PiBasketball, PiCourtBasketball } from "react-icons/pi";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -21,27 +23,25 @@ export default function RootLayout({
             <div className="flex h-16 items-center justify-between">
               <Link
                 href="/"
-                className="flex items-center gap-2 text-2xl font-bold tracking-tight hover:text-primary transition-all hover:scale-105"
+                className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl font-bold tracking-tight hover:text-primary transition-colors"
               >
-                <div className="w-8 h-8 rounded-lg bg-linear-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg">
-                  <span className="text-white text-sm font-black">TT</span>
-                </div>
-                <span className="hidden sm:inline bg-linear-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  TTFL Tracker
-                </span>
+                <PiBasketball className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+                <span>TTFL Tracker</span>
               </Link>
               <div className="flex gap-1 sm:gap-2">
                 <Link
                   href="/"
-                  className="px-3 sm:px-4 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                 >
-                  Dashboard
+                  <PiCourtBasketball size={20} />
+                  <span>Dashboard</span>
                 </Link>
                 <Link
                   href="/history"
-                  className="px-3 sm:px-4 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                 >
-                  History
+                  <Clock className="h-4 w-4" />
+                  <span>History</span>
                 </Link>
               </div>
             </div>

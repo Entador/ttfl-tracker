@@ -77,6 +77,13 @@ export default function DateNavigation({ currentDate }: DateNavigationProps) {
     });
   };
 
+  const formatFullDate = (date: Date) =>
+    date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+
   return (
     <div className="flex items-center justify-center gap-2 sm:gap-3 border-2 border-input rounded-2xl p-1.5 sm:p-2">
       <Button
@@ -91,9 +98,19 @@ export default function DateNavigation({ currentDate }: DateNavigationProps) {
       </Button>
 
       <div className="min-w-28 sm:min-w-40 text-center">
-        <span className="text-base sm:text-lg font-semibold">
-          {formatDate(date)}
-        </span>
+        <div className="flex flex-col items-center leading-tight">
+          <span className="text-base sm:text-lg font-semibold">
+            {formatDate(date)}
+          </span>
+
+          {(formatDate(date) === "Today" ||
+            formatDate(date) === "Yesterday" ||
+            formatDate(date) === "Tomorrow") && (
+            <span className="text-[11px] sm:text-xs text-muted-foreground">
+              {formatFullDate(date)}
+            </span>
+          )}
+        </div>
       </div>
 
       <Button

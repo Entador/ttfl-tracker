@@ -43,6 +43,7 @@ class Player(Base):
     # Injury status from ESPN
     injury_status = Column(String(20), nullable=True)
     injury_return_date = Column(String(20), nullable=True)
+    injury_details = Column(String(500), nullable=True)
 
     team = relationship("Team", back_populates="players")
     ttfl_scores = relationship("TTFLScore", back_populates="player", cascade="all, delete-orphan")

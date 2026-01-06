@@ -1,15 +1,25 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import Link from "next/link";
 import { useMemo } from "react";
 
-import { FilterOption } from "@/components/PlayerFilters";
+import { PlayerInfo } from "@/components/PlayerInfo";
+import { TeamLogo } from "@/components/TeamLogo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Player } from "@/lib/api";
 
-function InjuryBadge({ status, returnDate }: { status: string | null; returnDate: string | null }) {
+const LOGO_SIZE = 32;
+
+function InjuryBadge({
+  status,
+  returnDate,
+  details,
+}: {
+  status: string | null;
+  returnDate: string | null;
+  details: string | null;
+}) {
   if (!status) return null;
 
   const isOut = status.toLowerCase() === "out";
@@ -17,13 +27,29 @@ function InjuryBadge({ status, returnDate }: { status: string | null; returnDate
   const variant = isOut ? "destructive" : "warning";
 
   return (
-    <Badge
-      variant={variant}
-      className="px-1.5 py-0 text-[10px] leading-4"
-      title={returnDate ? `Return: ${returnDate}` : undefined}
-    >
-      {label}
-    </Badge>
+    <div className="relative group">
+      <Badge variant={variant} className="px-1.5 py-0.5 text-[11px] leading-4">
+        {label}
+      </Badge>
+      {(returnDate || details) && (
+        <div className="absolute left-0 top-full mt-2 z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
+          <div className="bg-popover text-popover-foreground border rounded-lg shadow-xl px-3 py-2.5 text-sm w-70 max-w-[90vw]">
+            {returnDate && (
+              <div className="mb-2 last:mb-0">
+                <p className="font-semibold leading-relaxed">
+                  Expected return: {returnDate}
+                </p>
+              </div>
+            )}
+            {details && (
+              <div className="text-xs text-muted-foreground leading-relaxed wrap-break-word">
+                {details}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -44,7 +70,6 @@ interface PlayersTableProps {
   currentPick: number | null;
   isHydrated: boolean;
   loading: boolean;
-  filterBy: FilterOption;
   onPickPlayer: (playerId: number) => void;
   onRemovePick: () => void;
 }
@@ -102,12 +127,10 @@ export default function PlayersTable({
   currentPick,
   isHydrated,
   loading,
-  filterBy,
   onPickPlayer,
   onRemovePick,
 }: PlayersTableProps) {
   const statRanges = useStatRanges(players);
-  const hideEligibility = filterBy === "available";
 
   return (
     <div className="relative">
@@ -118,12 +141,11 @@ export default function PlayersTable({
       )}
 
       {/* Table Layout */}
-      <div className="overflow-x-auto border rounded-lg">
+      <div className="overflow-x-auto border rounded-lg scrollbar-hide">
         <table className="w-full text-sm">
           <thead className="text-xs">
             {/* Group headers row */}
             <tr className="bg-muted/40">
-              <th className={hideEligibility ? "hidden" : ""}></th>
               <th></th>
               <th className="border-transparent border-0"></th>
               <th
@@ -142,9 +164,6 @@ export default function PlayersTable({
             </tr>
             {/* Column headers row */}
             <tr className="border-b bg-muted/20">
-              <th
-                className={`w-8 px-2 py-2 ${hideEligibility ? "hidden" : ""}`}
-              ></th>
               <th className="w-10 px-1 py-2"></th>
               <th className="whitespace-nowrap pr-2 py-2 text-left font-medium">
                 Player
@@ -166,39 +185,30 @@ export default function PlayersTable({
             {players.map((player) => (
               <tr
                 key={player.player_id}
-                className="hover:bg-muted/50 transition-colors"
+                className={`hover:bg-muted/50 transition-colors ${
+                  isHydrated && !player.is_eligible ? "opacity-50" : ""
+                }`}
               >
-                <td
-                  className={`w-8 px-2 py-2 ${hideEligibility ? "hidden" : ""}`}
-                >
-                  <div className="flex justify-center">
-                    <div
-                      className={`w-2 h-2 rounded-full ${
-                        !isHydrated
-                          ? "bg-muted-foreground/30"
-                          : player.is_eligible
-                          ? "bg-success"
-                          : "bg-destructive"
-                      }`}
-                    />
-                  </div>
+                <td className="w-10 pl-3 pr-2 py-2">
+                  <InjuryBadge
+                    status={player.injury_status}
+                    returnDate={player.injury_return_date}
+                    details={player.injury_details}
+                  />
                 </td>
-                <td className="w-10 px-1 py-2">
-                  <InjuryBadge status={player.injury_status} returnDate={player.injury_return_date} />
+                <td className="whitespace-nowrap pr-2">
+                  <PlayerInfo
+                    playerId={player.player_id}
+                    name={player.name}
+                    team={player.team}
+                    logoSize={LOGO_SIZE}
+                  />
                 </td>
-                <td className="whitespace-nowrap pr-2 py-2">
-                  <Link
-                    href={`/players/${player.player_id}`}
-                    className="hover:underline"
-                  >
-                    <span className="font-medium">{player.name}</span>
-                    <span className="text-muted-foreground ml-1.5 text-xs">
-                      {player.team}
-                    </span>
-                  </Link>
-                </td>
-                <td className="whitespace-nowrap px-3 py-2 text-muted-foreground border-l-[3px] border-red-400/50 bg-red-500/3">
-                  {player.is_home ? "vs" : "@"} {player.opponent}
+                <td className="whitespace-nowrap px-3 text-muted-foreground border-l-[3px] border-red-400/50 bg-red-500/3">
+                  <span className="flex items-center gap-1">
+                    {player.is_home ? "vs" : "@"}
+                    <TeamLogo team={player.opponent} size={LOGO_SIZE} />
+                  </span>
                 </td>
                 <td
                   className="px-3 py-2 text-right text-muted-foreground tabular-nums bg-red-500/3"
@@ -252,7 +262,7 @@ export default function PlayersTable({
                       Pick
                     </Button>
                   ) : (
-                    <span className="text-xs text-muted-foreground tabular-nums">
+                    <span className="inline-flex items-center justify-center h-6 text-xs text-muted-foreground tabular-nums">
                       {player.days_until_eligible}d
                     </span>
                   )}
