@@ -141,7 +141,7 @@ export default function PlayersTable({
       )}
 
       {/* Table Layout */}
-      <div className="overflow-x-auto border rounded-lg scrollbar-hide">
+      <div className="overflow-x-auto overflow-y-hidden border rounded-lg scrollbar-hide">
         <table className="w-full text-sm">
           <thead className="text-xs">
             {/* Group headers row */}
@@ -189,7 +189,7 @@ export default function PlayersTable({
                   isHydrated && !player.is_eligible ? "opacity-50" : ""
                 }`}
               >
-                <td className="w-10 pl-3 pr-2 py-2">
+                <td className="w-10 pl-2 sm:pl-3 pr-1 sm:pr-2 py-2">
                   <InjuryBadge
                     status={player.injury_status}
                     returnDate={player.injury_return_date}
