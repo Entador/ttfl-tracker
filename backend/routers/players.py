@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from models.database import get_db
 from models import Player, Game, Team, TTFLScore
+from services.cache import app_cache
 
 router = APIRouter()
 
@@ -116,8 +117,8 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
     """
     Get players for a specific date with TTFL stats.
 
-    Optimized to use batch queries instead of N+1 pattern.
-    ~3 queries total instead of 900+ queries.
+    Uses pre-loaded cache for games, teams, and players to minimize database queries.
+    Only queries database for TTFL score calculations (dynamic data).
     """
     try:
         # Parse date or default to today
@@ -126,13 +127,8 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
         else:
             target_date = date.today()
 
-        # Query 1: Get games with teams eager-loaded
-        games = (
-            db.query(Game)
-            .options(joinedload(Game.home_team), joinedload(Game.away_team))
-            .filter(Game.game_date == target_date)
-            .all()
-        )
+        # Get games from memory cache
+        games = app_cache.get_games_for_date(target_date)
 
         if not games:
             return []
@@ -143,13 +139,8 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
             team_ids.add(game.home_team_id)
             team_ids.add(game.away_team_id)
 
-        # Query 2: Get all active players for tonight's teams
-        players = (
-            db.query(Player)
-            .options(joinedload(Player.team))
-            .filter(Player.team_id.in_(team_ids), Player.is_active == True)
-            .all()
-        )
+        # Get active players from memory cache (no DB query!)
+        players = app_cache.get_active_players_for_teams(team_ids)
 
         # Build player lookup by team_id
         players_by_team = {}
@@ -158,7 +149,7 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
                 players_by_team[player.team_id] = []
             players_by_team[player.team_id].append(player)
 
-        # Query 3: Batch calculate all TTFL averages
+        # Only DB query: Batch calculate all TTFL averages (dynamic data)
         player_ids = [p.id for p in players]
         averages = _batch_calculate_averages(db, player_ids)
 
@@ -224,6 +215,8 @@ def get_player_stats(player_id: int, db: Session = Depends(get_db)):
     """
     Get recent game history for a player.
 
+    Uses cached player and team data, only queries DB for TTFL scores.
+
     Args:
         player_id: NBA player ID
 
@@ -235,14 +228,14 @@ def get_player_stats(player_id: int, db: Session = Depends(get_db)):
         }
     """
     try:
-        # Find player by NBA player ID
-        player = db.query(Player).filter(Player.nba_player_id == player_id).first()
+        # Find player in cache (no DB query!)
+        player = app_cache.get_player_by_nba_id(player_id)
 
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
 
-        # Get player's team
-        team = db.query(Team).filter(Team.id == player.team_id).first()
+        # Get player's team from cache (no DB query!)
+        team = app_cache.get_team(player.team_id)
         team_abbrev = team.abbreviation if team else ""
 
         # Get all season games with TTFL scores
@@ -256,12 +249,12 @@ def get_player_stats(player_id: int, db: Session = Depends(get_db)):
 
         games = []
         for ttfl_record, game in recent_scores:
-            # Determine opponent based on player's team
+            # Determine opponent based on player's team (use cache, no DB query!)
             if player.team_id == game.home_team_id:
-                opponent_team = db.query(Team).filter(Team.id == game.away_team_id).first()
+                opponent_team = app_cache.get_team(game.away_team_id)
                 is_home = True
             else:
-                opponent_team = db.query(Team).filter(Team.id == game.home_team_id).first()
+                opponent_team = app_cache.get_team(game.home_team_id)
                 is_home = False
 
             games.append({

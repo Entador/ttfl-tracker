@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from routers import players, games
+from services.cache import app_cache
+from models.database import SessionLocal, get_db
 
 app = FastAPI(
     title="TTFL Tracker API",
@@ -17,6 +20,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.on_event("startup")
+async def startup_event():
+    """Pre-load static data on app startup to reduce database queries"""
+    db = SessionLocal()
+    try:
+        app_cache.load_schedule(db)
+        print("App ready!")
+    except Exception as e:
+        print(f"Warning: Could not pre-load cache: {e}")
+        print("App will continue but without cached data")
+    finally:
+        db.close()
+
+
 # Include routers
 app.include_router(players.router, prefix="/api", tags=["players"])
 app.include_router(games.router, prefix="/api", tags=["games"])
@@ -32,3 +50,30 @@ def read_root():
 def health_check():
     """Health check endpoint"""
     return {"status": "healthy"}
+
+
+@app.post("/admin/refresh-cache")
+def refresh_cache(db: Session = Depends(get_db)):
+    """
+    Refresh the application cache (games, teams, players).
+
+    Use this endpoint when:
+    - Games are postponed or rescheduled
+    - New games or players are added to the database
+    - After running daily_update.py script (to refresh injury status)
+    """
+    try:
+        app_cache.load_schedule(db)
+        return {
+            "status": "success",
+            "message": "Application cache refreshed",
+            "games_count": sum(len(games) for games in app_cache.games_by_date.values()),
+            "dates_count": len(app_cache.games_by_date),
+            "teams_count": len(app_cache.teams_by_id),
+            "players_count": len(app_cache.players_by_id)
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to refresh cache: {str(e)}"
+        }
