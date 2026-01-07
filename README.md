@@ -49,7 +49,7 @@ TTFL_SCORE = POSITIVE - NEGATIVE
 | Database | PostgreSQL (Neon) | Free tier, cloud hosted, good UI |
 | ORM | SQLAlchemy 2.0 | Industry standard, good learning |
 | Data Source | `nba_api` (Python package) | Free, comprehensive NBA stats |
-| Hosting | Vercel (front) + Render (back) | Free tiers available |
+| Hosting | Vercel (both frontend & backend) | Serverless Python support |
 
 use poetry as package manager
 
@@ -60,15 +60,26 @@ use poetry as package manager
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │   Next.js       │────▶│   FastAPI       │────▶│   PostgreSQL    │
-│   (Frontend)    │     │   (Backend)     │     │   (Supabase)    │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                               │
-                               ▼
-                        ┌─────────────────┐
-                        │   nba_api       │
-                        │   (Data source) │
-                        └─────────────────┘
+│   (Frontend)    │     │   (Backend API) │  ┌─▶│   (Neon)        │
+└─────────────────┘     └─────────────────┘  │  └─────────────────┘
+     Vercel                   Vercel          │           ▲
+                                              │           │
+                        ┌─────────────────────┴───────────┘
+                        │  Daily Update Script
+                        │  (GitHub Actions cron)
+                        └─────────────────┬───────────────
+                                          │
+                                          ▼
+                                   ┌─────────────────┐
+                                   │   nba_api       │
+                                   │   (NBA API)     │
+                                   └─────────────────┘
 ```
+
+**Data Flow:**
+- **Backend API** reads from database to serve requests (no direct NBA API calls)
+- **Daily Script** fetches fresh data from NBA API and updates the database
+- Runs automatically via GitHub Actions cron job
 
 ---
 
@@ -123,19 +134,22 @@ ttfl-tracker/
 │       ├── PlayerCard.tsx
 │       └── EligibilityBadge.tsx
 │
-├── backend/                  # FastAPI
-│   ├── app.py               # API entrypoint
-│   ├── routers/
-│   │   ├── players.py
-│   │   └── games.py
-│   ├── services/
-│   │   ├── nba_api.py       # Fetch from NBA
-│   │   └── ttfl.py          # Score calculation
-│   ├── models/              # SQLAlchemy models
-│   └── database.py
-│
-└── scripts/
-    └── import_season.py     # Historical data import
+└── backend/                  # FastAPI + Scripts
+    ├── app.py               # API entrypoint
+    ├── routers/
+    │   ├── players.py       # API endpoints for players
+    │   └── games.py         # API endpoints for games
+    ├── services/
+    │   ├── nba_api.py       # NBA API wrapper (used by scripts)
+    │   ├── ttfl.py          # Score calculation
+    │   └── injuries.py      # Injury data from ESPN
+    ├── models/              # SQLAlchemy models
+    │   ├── database.py      # DB connection
+    │   └── __init__.py      # Player, Game, Team, TTFLScore models
+    └── scripts/
+        ├── daily_update.py  # Automated DB updates (GitHub Actions)
+        ├── populate_db.py   # Initial data population
+        └── *.py             # Other maintenance scripts
 ```
 
 ---

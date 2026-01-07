@@ -20,9 +20,10 @@
 
 ### ⚠️ Remaining Setup Steps
 1. Install dependencies
-2. Set up Supabase database
+2. Set up database (Neon or local PostgreSQL)
 3. Configure environment variables
-4. Run and test
+4. Populate database with NBA data
+5. Run and test
 
 ---
 
@@ -43,15 +44,14 @@ poetry install
 poetry show
 ```
 
-### 2. Set Up Supabase Database
+### 2. Set Up Database
 
-**Option A: Create Supabase Project (Recommended)**
+**Option A: Create Neon Project (Recommended)**
 
-1. Go to [supabase.com](https://supabase.com)
+1. Go to [neon.tech](https://neon.tech)
 2. Create a new project
-3. Navigate to Project Settings → Database
-4. Copy the connection string (URI format)
-5. It will look like: `postgresql://postgres:[password]@[host]:5432/postgres`
+3. Copy the connection string from the dashboard
+4. It will look like: `postgresql://[user]:[password]@[host]/[database]?sslmode=require`
 
 **Option B: Use Local PostgreSQL**
 
@@ -79,7 +79,7 @@ Option 1: Using Python
 poetry run python -c "from models.database import engine, Base; from models import Player, Game; Base.metadata.create_all(bind=engine)"
 ```
 
-Option 2: Using Supabase SQL Editor
+Option 2: Using Neon SQL Editor
 ```sql
 CREATE TABLE players (
     id SERIAL PRIMARY KEY,
@@ -177,13 +177,36 @@ Visit: http://localhost:3000
 
 ## Testing the Application
 
+### Populate Initial Data
+
+Before the application can show any data, you need to populate the database with NBA data:
+
+```bash
+cd backend
+# Populate teams and players
+poetry run python scripts/populate_db.py
+
+# Fetch and populate game data (this may take a few minutes)
+poetry run python scripts/daily_update.py
+```
+
+The `daily_update.py` script:
+- Updates game statuses (scheduled → final)
+- Fetches TTFL scores for completed games
+- Updates team stats
+- Updates player injury information
+
+This script runs automatically via GitHub Actions in production, but you need to run it manually for local development.
+
 ### Backend Tests (via FastAPI /docs)
 
 1. Visit http://localhost:8000/docs
 2. Try these endpoints:
    - `GET /health` - Should return `{"status": "healthy"}`
-   - `GET /api/players/tonight` - Fetches tonight's NBA games and players
+   - `GET /api/players/tonight` - Shows tonight's NBA players (from database)
    - `GET /api/games/history` - Should return empty array initially
+
+**Important**: The backend API reads from the database. If you don't see data, run the populate and daily update scripts above.
 
 ### Frontend Tests
 
@@ -236,9 +259,8 @@ Once everything is working:
 
 1. **Add Tailwind for better styling** (see step 8 above)
 2. **Import historical data** - Create `scripts/import_season.py` to populate past games
-3. **Deploy backend** - Use Render or Railway
-4. **Deploy frontend** - Use Vercel
-5. **Add features** from Phase 2:
+3. **Deploy** - Both frontend and backend are deployed on Vercel (already done)
+4. **Add features** from Phase 2:
    - Stats breakdown by opponent
    - Back-to-back detection
    - Home/away performance splits

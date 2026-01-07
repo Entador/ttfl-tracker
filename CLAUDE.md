@@ -17,6 +17,8 @@ TTFL_SCORE = POSITIVE - NEGATIVE
 
 - **Backend**: FastAPI (Python 3.12+), SQLAlchemy 2.0, PostgreSQL
 - **Frontend**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS v4
+- **Database**: PostgreSQL (Neon)
+- **Hosting**: Vercel (both frontend and backend)
 - **Package Managers**: Poetry (backend), pnpm (frontend)
 - **Data Source**: `nba_api` Python package
 
@@ -73,13 +75,18 @@ backend/
 ├── app.py                  # FastAPI app, CORS config, router registration
 ├── models/
 │   ├── database.py         # SQLAlchemy engine, SessionLocal, get_db()
-│   └── __init__.py         # Player and Game models
+│   └── __init__.py         # Player, Game, Team, TTFLScore models
 ├── routers/
 │   ├── players.py          # GET /api/players/tonight, GET /api/players/{id}/stats
 │   └── games.py            # POST /api/games/pick, GET /api/games/history
-└── services/
-    ├── ttfl.py             # calculate_ttfl_score(), calculate_average_ttfl_score()
-    └── nba_api.py          # NBA API wrapper functions
+├── services/
+│   ├── ttfl.py             # calculate_ttfl_score(), calculate_average_ttfl_score()
+│   ├── nba_api.py          # NBA API wrapper functions (used by scripts)
+│   └── injuries.py         # Fetch injury data from ESPN
+└── scripts/
+    ├── daily_update.py     # Automated database updates (runs via GitHub Actions)
+    ├── populate_db.py      # Initial database population
+    └── *.py                # Other maintenance scripts
 ```
 
 **Key API Endpoints:**
@@ -108,11 +115,20 @@ frontend/
 
 ### Data Flow
 
-1. **NBA API → Backend Services**: `nba_api.py` fetches live game data and player stats
-2. **Backend Services → Router**: Routers call service functions to get/calculate data
-3. **Router → Database**: SQLAlchemy models (Player, Game) interact with PostgreSQL
-4. **Frontend → Backend**: API calls via `/lib/api.ts` to FastAPI endpoints
-5. **TTFL Score Calculation**: Raw NBA stats → `ttfl.calculate_ttfl_score()` → integer score
+The app follows a **database-first architecture** where the backend serves data from the database, and a separate daily script updates the database with fresh data from the NBA API.
+
+**Daily Update Cycle (via GitHub Actions cron):**
+1. **NBA API → Daily Script**: `daily_update.py` fetches game data, scores, and injury info
+2. **Daily Script → Database**: Updates game statuses, TTFL scores, team stats, and injuries
+3. **TTFL Score Calculation**: Raw NBA stats → `ttfl.calculate_ttfl_score()` → stored in database
+
+**Request Flow (Backend API):**
+1. **Frontend → Backend API**: API calls via `/lib/api.ts` to FastAPI endpoints
+2. **Backend Router → Database**: Routers query database using SQLAlchemy models
+3. **Backend Router → Services**: Calculate derived values (averages, projections) from DB data
+4. **Backend → Frontend**: JSON response with player/game data
+
+**Key Principle**: Backend routers read from the database, not from NBA API directly (except for optional demo mode).
 
 ### Database Schema
 
@@ -123,6 +139,33 @@ frontend/
 - `id` (PK), `player_id` (FK), `game_date`, `opponent`, `is_home`, `is_back2back`, `ttfl_score`, `picked`
 
 **Eligibility Query**: Player is eligible if no games with `picked=true` exist in the last 30 days.
+
+## Daily Update Script
+
+The `scripts/daily_update.py` script maintains the database with fresh NBA data. It runs daily via GitHub Actions cron job and can also be run manually.
+
+**What it does:**
+1. **Updates game statuses**: Changes games from "scheduled" → "final" based on NBA schedule
+2. **Populates TTFL scores**: Fetches box scores for completed games and calculates TTFL scores
+3. **Updates team stats**: Refreshes defensive ratings, pace, opponent stats for all teams
+4. **Updates injuries**: Fetches current injury reports from ESPN
+
+**Manual usage:**
+```bash
+# Run all phases
+poetry run python scripts/daily_update.py
+
+# Run specific phase only
+poetry run python scripts/daily_update.py --games-only
+poetry run python scripts/daily_update.py --scores-only
+poetry run python scripts/daily_update.py --stats-only
+poetry run python scripts/daily_update.py --injuries-only
+
+# Preview changes without committing
+poetry run python scripts/daily_update.py --dry-run
+```
+
+**Important**: The script uses `nba_api` and is subject to rate limits. It includes retry logic with exponential backoff for timeout errors.
 
 ## Important Patterns
 
@@ -143,7 +186,7 @@ Some endpoints use `get_optional_db()` to work without a database (API-only mode
 
 ### NBA API Rate Limiting
 
-The NBA API has rate limits. The `nba_api.py` service includes a 0.6s delay between requests. If you get errors, wait a few minutes before retrying.
+The NBA API has rate limits and is only called by the daily update script and other maintenance scripts (not by the backend API during normal operation). The `nba_api.py` service includes a 0.6s delay between requests. The daily update script has retry logic with exponential backoff for timeout errors. If you get errors when running scripts manually, wait a few minutes before retrying.
 
 ### Frontend Data Fetching
 
@@ -205,7 +248,7 @@ Always use `services.ttfl.calculate_ttfl_score(box_score)` for consistency. The 
 No formal test suite yet. Manual testing via:
 - Backend: FastAPI `/docs` interactive API explorer
 - Frontend: Browser testing at `http://localhost:3000`
-- Database: Direct SQL queries via Supabase dashboard or `psql`
+- Database: Direct SQL queries via Neon console or `psql`
 
 When adding tests, consider:
 - Backend: pytest for API endpoints and TTFL score calculations
