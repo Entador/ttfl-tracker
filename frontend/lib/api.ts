@@ -27,6 +27,16 @@ export interface Player {
   injury_details: string | null;
 }
 
+export interface GameInfo {
+  away_team: string;
+  home_team: string;
+}
+
+export interface PlayersResponse {
+  players: Player[];
+  games: GameInfo[];
+}
+
 export interface PlayerStats {
   player: {
     id: number;
@@ -87,20 +97,20 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
  * Server-side fetch for tonight's players.
  * Uses cache: 'no-store' to always get fresh data.
  */
-export async function getPlayersForDate(date: string): Promise<Player[]> {
+export async function getPlayersForDate(date: string): Promise<PlayersResponse> {
   const endpoint = `/api/players/tonight?game_date=${date}`;
-  return fetchAPI<Player[]>(endpoint, { cache: 'no-store' });
+  return fetchAPI<PlayersResponse>(endpoint, { cache: 'no-store' });
 }
 
 /**
  * Client-side fetch for tonight's players (used after date navigation).
  */
-export async function getTonightsPlayers(date?: string): Promise<Player[]> {
+export async function getTonightsPlayers(date?: string): Promise<PlayersResponse> {
   const endpoint = date
     ? `/api/players/tonight?game_date=${date}`
     : '/api/players/tonight';
 
-  return fetchAPI<Player[]>(endpoint);
+  return fetchAPI<PlayersResponse>(endpoint);
 }
 
 export async function getPlayerStats(playerId: number): Promise<PlayerStats> {

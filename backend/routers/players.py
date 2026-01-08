@@ -155,6 +155,7 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
 
         # Build response (no more queries needed)
         players_tonight = []
+        games_list = []
 
         for game in games:
             home_team = game.home_team
@@ -162,6 +163,12 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
 
             if not home_team or not away_team:
                 continue
+
+            # Add game to games list
+            games_list.append({
+                'away_team': away_team.abbreviation,
+                'home_team': home_team.abbreviation,
+            })
 
             # Home team players (opponent is away_team)
             for player in players_by_team.get(game.home_team_id, []):
@@ -201,7 +208,10 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
                     'injury_details': player.injury_details,
                 })
 
-        return players_tonight
+        return {
+            'players': players_tonight,
+            'games': games_list
+        }
 
     except Exception as e:
         import traceback

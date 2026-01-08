@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import PlayersView from "@/components/PlayersView";
-import { getPlayersForDate, getTodayET, Player } from "@/lib/api";
+import { getPlayersForDate, getTodayET, PlayersResponse } from "@/lib/api";
 
 interface PageProps {
   searchParams: Promise<{ date?: string }>;
@@ -41,14 +41,14 @@ function validateDate(dateParam: string | undefined, todayET: string): string | 
 
 /**
  * Fetch players with error handling.
- * Returns empty array on error to allow graceful degradation.
+ * Returns empty response on error to allow graceful degradation.
  */
-async function fetchPlayers(date: string): Promise<Player[]> {
+async function fetchPlayers(date: string): Promise<PlayersResponse> {
   try {
     return await getPlayersForDate(date);
   } catch (error) {
     console.error("Failed to fetch players:", error);
-    return [];
+    return { players: [], games: [] };
   }
 }
 
@@ -81,11 +81,15 @@ export default async function HomePage({ searchParams }: PageProps) {
   }
 
   // Fetch players on the server
-  const players = await fetchPlayers(validDate);
+  const data = await fetchPlayers(validDate);
 
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <PlayersView initialPlayers={players} initialDate={validDate} />
+      <PlayersView
+        initialPlayers={data.players}
+        initialGames={data.games}
+        initialDate={validDate}
+      />
     </Suspense>
   );
 }

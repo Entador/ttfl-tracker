@@ -97,8 +97,8 @@ export default function DateNavigation({ currentDate }: DateNavigationProps) {
         <ChevronLeft className="h-4 w-4" />
       </Button>
 
-      <div className="min-w-28 sm:min-w-40 text-center">
-        <div className="flex flex-col items-center leading-tight">
+      <div className="min-w-28 sm:min-w-40 text-center flex items-center justify-center h-10 sm:h-11">
+        <div className="flex flex-col items-center justify-center leading-tight">
           <span className="text-base sm:text-lg font-semibold">
             {formatDate(date)}
           </span>

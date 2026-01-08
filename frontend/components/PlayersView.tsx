@@ -8,35 +8,19 @@ import DateNavigation from "@/components/DateNavigation";
 import PlayerFilters, {
   FilterOption,
   SortOption,
+  Game,
 } from "@/components/PlayerFilters";
 import PlayersTable from "@/components/PlayersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getTonightsPlayers, Player } from "@/lib/api";
+import { getTonightsPlayers, Player, GameInfo } from "@/lib/api";
 import {
-  getDaysUntilEligible,
-  getLastPickedDate,
+  getAllPicks,
   getPickForDate,
   removePick,
   savePick,
 } from "@/lib/picks";
-
-function FiltersSkeleton() {
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {/* Filter badges skeleton */}
-      <div className="flex gap-2 pb-1 sm:pb-0">
-        <Skeleton className="h-6 w-24 rounded-full bg-blue-200/50" />
-        <Skeleton className="h-6 w-16 rounded-full bg-blue-200/50" />
-        <Skeleton className="h-6 w-20 rounded-full bg-blue-200/50" />
-      </div>
-
-      {/* Sort dropdown skeleton */}
-      <Skeleton className="h-9 w-full sm:w-44 rounded-md bg-blue-200/50" />
-    </div>
-  );
-}
 
 function TableSkeleton() {
   return (
@@ -121,6 +105,7 @@ function TableSkeleton() {
 
 interface PlayersViewProps {
   initialPlayers: Player[];
+  initialGames: GameInfo[];
   initialDate: string;
 }
 
@@ -132,6 +117,7 @@ interface PlayersViewProps {
  */
 export default function PlayersView({
   initialPlayers,
+  initialGames,
   initialDate,
 }: PlayersViewProps) {
   const router = useRouter();
@@ -143,6 +129,7 @@ export default function PlayersView({
 
   // Player data state
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const [games, setGames] = useState<GameInfo[]>(initialGames);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialDateLoaded, setInitialDateLoaded] = useState(initialDate);
@@ -150,6 +137,7 @@ export default function PlayersView({
   // Filter/sort state
   const [sortBy, setSortBy] = useState<SortOption>("avg-desc");
   const [filterBy, setFilterBy] = useState<FilterOption>("available");
+  const [selectedGame, setSelectedGame] = useState<string | null>(null);
 
   // Hydration + pick state (localStorage not available on server)
   const [isHydrated, setIsHydrated] = useState(false);
@@ -182,24 +170,46 @@ export default function PlayersView({
   // Add eligibility info from localStorage
   // currentPick triggers recalc when user picks/unpicks a player
   const playersWithEligibility = useMemo(() => {
-    return players.map((player) => {
-      if (!isHydrated) {
-        return {
-          ...player,
-          is_eligible: true,
-          last_picked_date: null,
-          days_until_eligible: null,
-        };
+    if (!isHydrated) {
+      return players.map((player) => ({
+        ...player,
+        is_eligible: true,
+        last_picked_date: null,
+        days_until_eligible: null,
+      }));
+    }
+
+    // Read localStorage once and build lookup map for performance
+    const allPicks = getAllPicks();
+    const from = new Date(currentDate);
+
+    // Build map of playerId -> last pick date within 30-day window
+    const eligibilityMap = new Map<number, { lastPickedDate: string; daysUntilEligible: number }>();
+
+    allPicks.forEach(pick => {
+      const pickDate = new Date(pick.date);
+      const diffDays = Math.floor((from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Pick counts if it was 1-29 days ago (within 30-day window, but NOT same day)
+      if (diffDays > 0 && diffDays < 30) {
+        const existing = eligibilityMap.get(pick.playerId);
+        // Keep the most recent pick
+        if (!existing || pick.date > existing.lastPickedDate) {
+          eligibilityMap.set(pick.playerId, {
+            lastPickedDate: pick.date,
+            daysUntilEligible: 30 - diffDays
+          });
+        }
       }
-      const lastPickedDate = getLastPickedDate(player.player_id, currentDate);
+    });
+
+    return players.map((player) => {
+      const eligibility = eligibilityMap.get(player.player_id);
       return {
         ...player,
-        is_eligible: !lastPickedDate,
-        last_picked_date: lastPickedDate,
-        days_until_eligible: getDaysUntilEligible(
-          player.player_id,
-          currentDate
-        ),
+        is_eligible: !eligibility,
+        last_picked_date: eligibility?.lastPickedDate || null,
+        days_until_eligible: eligibility?.daysUntilEligible || null,
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -211,7 +221,8 @@ export default function PlayersView({
       setLoading(true);
       setError(null);
       const data = await getTonightsPlayers(date);
-      setPlayers(data);
+      setPlayers(data.players);
+      setGames(data.games);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load players");
     } finally {
@@ -253,12 +264,25 @@ export default function PlayersView({
   const filteredPlayers = useMemo(() => {
     let filtered = [...playersWithEligibility];
 
+    // Filter by eligibility
     if (filterBy === "available") {
       filtered = filtered.filter((p) => p.is_eligible);
     } else if (filterBy === "locked") {
       filtered = filtered.filter((p) => !p.is_eligible);
     }
 
+    // Filter by selected game
+    if (selectedGame) {
+      filtered = filtered.filter((player) => {
+        // Match against away_team-home_team format from backend
+        const gameKey = player.is_home
+          ? `${player.opponent}-${player.team}`
+          : `${player.team}-${player.opponent}`;
+        return gameKey === selectedGame;
+      });
+    }
+
+    // Sort
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "avg-desc":
@@ -275,7 +299,7 @@ export default function PlayersView({
     });
 
     return filtered;
-  }, [playersWithEligibility, sortBy, filterBy]);
+  }, [playersWithEligibility, sortBy, filterBy, selectedGame]);
 
   const availableCount = isHydrated
     ? playersWithEligibility.filter((p) => p.is_eligible).length
@@ -285,15 +309,28 @@ export default function PlayersView({
     ? playersWithEligibility.filter((p) => !p.is_eligible).length
     : null;
 
+  // Convert backend games to frontend format
+  const gamesForFilter = useMemo(() => {
+    return games.map((game) => {
+      const key = `${game.away_team}-${game.home_team}`;
+      return {
+        key,
+        awayTeam: game.away_team,
+        homeTeam: game.home_team,
+        label: `${game.away_team} @ ${game.home_team}`,
+      };
+    });
+  }, [games]);
+
+  const gamesCount = games.length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl sm:text-xl font-bold tracking-tight">
-            Pick Dashboard
-          </h1>
-        </div>
+        <h1 className="text-xl sm:text-xl font-bold tracking-tight">
+          Pick Dashboard
+        </h1>
         <DateNavigation currentDate={currentDate} />
       </div>
 
@@ -344,6 +381,10 @@ export default function PlayersView({
         totalCount={players.length ?? null}
         availableCount={availableCount}
         lockedCount={lockedCount}
+        gamesCount={players.length > 0 ? gamesCount : null}
+        games={gamesForFilter}
+        selectedGame={selectedGame}
+        onGameChange={setSelectedGame}
       />
 
       {/* Players list */}

@@ -2,16 +2,29 @@
 
 import { Badge } from "@/components/ui/badge";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SortAsc } from "lucide-react";
+import { Check, SortAsc, Trophy } from "lucide-react";
+import { useState } from "react";
 
 export type SortOption = "avg-desc" | "avg-asc" | "name-asc" | "name-desc";
 export type FilterOption = "all" | "available" | "locked";
+
+export interface Game {
+  key: string;
+  awayTeam: string;
+  homeTeam: string;
+  label: string;
+}
 
 interface PlayerFiltersProps {
   sortBy: SortOption;
@@ -21,6 +34,10 @@ interface PlayerFiltersProps {
   totalCount?: number | null;
   availableCount?: number | null;
   lockedCount?: number | null;
+  gamesCount?: number | null;
+  games?: Game[];
+  selectedGame?: string | null;
+  onGameChange?: (gameKey: string | null) => void;
 }
 
 export default function PlayerFilters({
@@ -31,13 +48,80 @@ export default function PlayerFilters({
   totalCount,
   availableCount,
   lockedCount,
+  gamesCount,
+  games = [],
+  selectedGame,
+  onGameChange,
 }: PlayerFiltersProps) {
+  const [open, setOpen] = useState(false);
+  const selectedGameData = games.find((g) => g.key === selectedGame);
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Filter badges */}
-      <div className="flex gap-2 pb-1 sm:pb-0">
+      <div className="flex flex-wrap gap-2 pb-1 sm:pb-0">
+        {typeof gamesCount === "number" && gamesCount > 0 && (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <button className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-full border border-input hover:bg-accent transition-colors shrink-0">
+                <Trophy className="h-3 w-3" />
+                <span>
+                  {selectedGameData ? (
+                    <span className="font-mono">
+                      {selectedGameData.awayTeam} @ {selectedGameData.homeTeam}
+                    </span>
+                  ) : (
+                    `${gamesCount} ${gamesCount === 1 ? "game" : "games"}`
+                  )}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-40 p-1" sideOffset={4}>
+              <div className="space-y-0">
+                {/* All games option */}
+                <button
+                  onClick={() => {
+                    onGameChange?.(null);
+                    setOpen(false);
+                  }}
+                  className={`w-full px-2 py-1.5 text-xs rounded transition-colors text-left ${
+                    !selectedGame
+                      ? "bg-primary text-primary-foreground font-medium"
+                      : "hover:bg-accent"
+                  }`}
+                >
+                  <span>All games</span>
+                </button>
+
+                {/* Games list */}
+                {games.map((game) => {
+                  const isSelected = selectedGame === game.key;
+                  return (
+                    <button
+                      key={game.key}
+                      onClick={() => {
+                        onGameChange?.(game.key);
+                        setOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2 py-1.5 text-xs rounded transition-colors ${
+                        isSelected ? "bg-accent font-medium" : "hover:bg-accent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span className="font-mono">{game.awayTeam}</span>
+                        <span className="text-muted-foreground">@</span>
+                        <span className="font-mono">{game.homeTeam}</span>
+                      </div>
+                      {isSelected && <Check className="h-3 w-3 text-primary" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
         <Badge
-          variant={filterBy === "available" ? "success" : "outline"}
+          variant={filterBy === "available" ? "default" : "outline"}
           className="cursor-pointer shrink-0"
           onClick={() => onFilterChange("available")}
         >
@@ -51,7 +135,7 @@ export default function PlayerFilters({
           All: {totalCount ?? "—"}
         </Badge>
         <Badge
-          variant={filterBy === "locked" ? "destructive" : "outline"}
+          variant={filterBy === "locked" ? "default" : "outline"}
           className="cursor-pointer shrink-0"
           onClick={() => onFilterChange("locked")}
         >
