@@ -239,7 +239,9 @@ export default function PlayerDetailPage() {
               <TableRow>
                 <TableHead className="h-8 py-1">Date</TableHead>
                 <TableHead className="h-8 py-1">Matchup</TableHead>
-                <TableHead className="text-right h-8 py-1">TTFL Score</TableHead>
+                <TableHead className="text-right h-8 py-1">
+                  TTFL Score
+                </TableHead>
                 <TableHead className="text-center h-8 py-1">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -257,7 +259,7 @@ export default function PlayerDetailPage() {
                     })}
                   </TableCell>
                   <TableCell className="py-1.5">
-                    <span className="flex items-center text-muted-foreground">
+                    <span className="flex items-center text-muted-foreground gap-1">
                       {game.is_home ? "vs" : "@"}
                       <TeamLogo team={game.opponent} size={LOGO_SIZE} />
                     </span>
