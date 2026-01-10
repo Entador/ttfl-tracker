@@ -386,13 +386,11 @@ export default function PlayersView({
       />
 
       {/* Players list */}
-      {!error && players.length > 0 && (
+      {!error && (
         <>
-          {!isHydrated ? (
-            <>
-              <TableSkeleton />
-            </>
-          ) : (
+          {loading || !isHydrated ? (
+            <TableSkeleton />
+          ) : players.length > 0 ? (
             <>
               {filteredPlayers.length === 0 ? (
                 <p className="text-center text-sm text-muted-foreground py-4">
@@ -403,13 +401,13 @@ export default function PlayersView({
                   players={filteredPlayers}
                   currentPick={currentPick}
                   isHydrated={isHydrated}
-                  loading={loading}
+                  loading={false}
                   onPickPlayer={handlePickPlayer}
                   onRemovePick={handleRemovePick}
                 />
               )}
             </>
-          )}
+          ) : null}
         </>
       )}
     </div>

@@ -182,66 +182,94 @@ export default function PlayersTable({
             </tr>
           </thead>
           <tbody className="divide-y">
-            {players.map((player) => (
-              <tr
-                key={player.player_id}
-                className={`hover:bg-muted/50 transition-colors ${
-                  isHydrated && !player.is_eligible ? "opacity-50" : ""
-                }`}
-              >
-                <td className="w-10 pl-2 sm:pl-3 pr-1 sm:pr-2 py-2">
-                  <InjuryBadge
-                    status={player.injury_status}
-                    returnDate={player.injury_return_date}
-                    details={player.injury_details}
-                  />
-                </td>
-                <td className="whitespace-nowrap pr-2">
-                  <PlayerInfo
-                    playerId={player.player_id}
-                    name={player.name}
-                    team={player.team}
-                    logoSize={LOGO_SIZE}
-                  />
-                </td>
-                <td className="whitespace-nowrap px-3 text-muted-foreground border-l-[3px] border-red-400/50 bg-red-500/3">
-                  <span className="flex items-center gap-1">
-                    {player.is_home ? "vs" : "@"}
-                    <TeamLogo team={player.opponent} size={LOGO_SIZE} />
-                  </span>
-                </td>
-                <td
-                  className="px-3 py-2 text-right text-muted-foreground tabular-nums bg-red-500/3"
-                  style={{
-                    backgroundColor: getStatBgColor(
-                      player.opp_pace,
-                      statRanges.pace
-                    ),
-                  }}
+            {players.map((player) => {
+              const isIneligible = isHydrated && !player.is_eligible;
+              return (
+                <tr
+                  key={player.player_id}
+                  className="hover:bg-muted/50 transition-colors"
                 >
-                  {player.opp_pace?.toFixed(1) ?? "-"}
-                </td>
-                <td
-                  className="px-3 py-2 text-right text-muted-foreground tabular-nums bg-red-500/3"
-                  style={{
-                    backgroundColor: getStatBgColor(
-                      player.opp_def_rating,
-                      statRanges.defRating
-                    ),
-                  }}
-                >
-                  {player.opp_def_rating?.toFixed(1) ?? "-"}
-                </td>
-                <td className="px-3 py-2 text-right text-muted-foreground tabular-nums border-l-[3px] border-primary/50 bg-primary/3">
-                  {player.avg_ttfl.toFixed(1)}
-                </td>
-                <td className="px-3 py-2 text-right font-semibold tabular-nums bg-primary/3">
-                  {player.avg_ttfl_l10.toFixed(1)}
-                </td>
-                <td className="px-3 py-2 text-right text-muted-foreground tabular-nums bg-primary/3">
-                  {player.avg_ttfl_l30d.toFixed(1)}
-                </td>
-                <td className="px-2 py-2 text-right">
+                  <td className="w-10 pl-2 sm:pl-3 pr-1 sm:pr-2 py-2">
+                    <InjuryBadge
+                      status={player.injury_status}
+                      returnDate={player.injury_return_date}
+                      details={player.injury_details}
+                    />
+                  </td>
+                  <td
+                    className={`whitespace-nowrap pr-2 ${
+                      isIneligible ? "opacity-50" : ""
+                    }`}
+                  >
+                    <PlayerInfo
+                      playerId={player.player_id}
+                      name={player.name}
+                      team={player.team}
+                      logoSize={LOGO_SIZE}
+                    />
+                  </td>
+                  <td
+                    className={`whitespace-nowrap px-3 text-muted-foreground border-l-[3px] border-red-400/50 bg-red-500/3 ${
+                      isIneligible ? "opacity-50" : ""
+                    }`}
+                  >
+                    <span className="flex items-center gap-1">
+                      {player.is_home ? "vs" : "@"}
+                      <TeamLogo team={player.opponent} size={LOGO_SIZE} />
+                    </span>
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-right text-muted-foreground tabular-nums bg-red-500/3 ${
+                      isIneligible ? "opacity-50" : ""
+                    }`}
+                    style={{
+                      backgroundColor: getStatBgColor(
+                        player.opp_pace,
+                        statRanges.pace
+                      ),
+                    }}
+                  >
+                    {player.opp_pace?.toFixed(1) ?? "-"}
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-right text-muted-foreground tabular-nums bg-red-500/3 ${
+                      isIneligible ? "opacity-50" : ""
+                    }`}
+                    style={{
+                      backgroundColor: getStatBgColor(
+                        player.opp_def_rating,
+                        statRanges.defRating
+                      ),
+                    }}
+                  >
+                    {player.opp_def_rating?.toFixed(1) ?? "-"}
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-right text-muted-foreground tabular-nums border-l-[3px] border-primary/50 bg-primary/3 ${
+                      isIneligible ? "opacity-50" : ""
+                    }`}
+                  >
+                    {player.avg_ttfl.toFixed(1)}
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-right font-semibold tabular-nums bg-primary/3 ${
+                      isIneligible ? "opacity-50" : ""
+                    }`}
+                  >
+                    {player.avg_ttfl_l10.toFixed(1)}
+                  </td>
+                  <td
+                    className={`px-3 py-2 text-right text-muted-foreground tabular-nums bg-primary/3 ${
+                      isIneligible ? "opacity-50" : ""
+                    }`}
+                  >
+                    {player.avg_ttfl_l30d.toFixed(1)}
+                  </td>
+                  <td
+                    className={`px-2 py-2 text-right ${
+                      isIneligible ? "opacity-50" : ""
+                    }`}
+                  >
                   {!isHydrated ? (
                     <span className="text-xs text-muted-foreground">—</span>
                   ) : currentPick === player.player_id ? (
@@ -268,7 +296,8 @@ export default function PlayersTable({
                   )}
                 </td>
               </tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>
