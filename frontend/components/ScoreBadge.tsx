@@ -7,34 +7,40 @@ interface ScoreBadgeProps {
 
 /**
  * TTFL Score color thresholds:
- * - < 15: Blue (really bad)
- * - 15-25: Yellow (below average)
- * - 25-35: Orange (average)
- * - 35-45: Red (good)
- * - 45+: Purple (excellent)
+ * - < 10: Soft slate (very low)
+ * - 10-20: Soft blue (low)
+ * - 20-30: Soft yellow (below average)
+ * - 30-40: Amber (average)
+ * - 40-50: Orange (above average)
+ * - 50-60: Orange-red (good)
+ * - 60-70: Red (very good)
+ * - 70+: Purple (elite)
  */
 function getScoreColor(score: number): { bg: string; text: string } {
   if (score < 10) {
-    return { bg: "from-blue-500 to-blue-600", text: "text-white" };
+    return { bg: "bg-slate-300", text: "text-slate-900" };
   }
   if (score < 20) {
-    return { bg: "from-cyan-400 to-cyan-500", text: "text-cyan-950" };
+    return { bg: "bg-blue-300", text: "text-blue-950" };
   }
   if (score < 30) {
-    return { bg: "from-yellow-400 to-yellow-500", text: "text-yellow-950" };
+    return { bg: "bg-yellow-300", text: "text-yellow-950" };
   }
   if (score < 40) {
-    return { bg: "from-orange-500 to-orange-600", text: "text-white" };
+    return { bg: "bg-amber-400", text: "text-amber-950" };
   }
   if (score < 50) {
-    return { bg: "from-red-500 to-red-600", text: "text-white" };
+    return { bg: "bg-orange-400", text: "text-orange-950" };
   }
   if (score < 60) {
-    return { bg: "from-pink-500 to-pink-600", text: "text-white" };
+    return { bg: "bg-orange-500", text: "text-white" };
+  }
+  if (score < 70) {
+    return { bg: "bg-red-500", text: "text-white" };
   }
 
-  // 60+ elite
-  return { bg: "from-purple-500 to-purple-600", text: "text-white" };
+  // 70+ elite
+  return { bg: "bg-purple-500", text: "text-white" };
 }
 
 export function ScoreBadge({ score, className }: ScoreBadgeProps) {
@@ -44,7 +50,6 @@ export function ScoreBadge({ score, className }: ScoreBadgeProps) {
     <div
       className={cn(
         "inline-flex items-center justify-center rounded-lg border border-transparent px-3 py-1 text-sm font-bold shadow-md",
-        "bg-linear-to-r",
         colors.bg,
         colors.text,
         className

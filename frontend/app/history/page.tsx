@@ -1,13 +1,33 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useMemo } from 'react';
-import { getPickHistory, PickHistory } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ScoreBadge } from '@/components/ScoreBadge';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, Loader2, TrendingUp, Target, Trophy, Calendar } from 'lucide-react';
-import Link from 'next/link';
+import { ScoreBadge } from "@/components/ScoreBadge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { getPickHistory, PickHistory } from "@/lib/api";
+import {
+  AlertCircle,
+  Calendar,
+  Loader2,
+  Target,
+  TrendingUp,
+  Trophy,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<PickHistory[]>([]);
@@ -25,7 +45,7 @@ export default function HistoryPage() {
       const data = await getPickHistory(50);
       setHistory(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load history');
+      setError(err instanceof Error ? err.message : "Failed to load history");
     } finally {
       setLoading(false);
     }
@@ -45,7 +65,7 @@ export default function HistoryPage() {
     }
 
     const totalScore = history.reduce((sum, pick) => sum + pick.ttfl_score, 0);
-    const scores = history.map(p => p.ttfl_score);
+    const scores = history.map((p) => p.ttfl_score);
 
     return {
       totalPicks: history.length,
@@ -53,8 +73,8 @@ export default function HistoryPage() {
       avgScore: totalScore / history.length,
       bestScore: Math.max(...scores),
       worstScore: Math.min(...scores),
-      above40: history.filter(p => p.ttfl_score >= 40).length,
-      above50: history.filter(p => p.ttfl_score >= 50).length,
+      above40: history.filter((p) => p.ttfl_score >= 40).length,
+      above50: history.filter((p) => p.ttfl_score >= 50).length,
     };
   }, [history]);
 
@@ -65,8 +85,12 @@ export default function HistoryPage() {
           <div className="w-20 h-20 rounded-full border-4 border-muted absolute"></div>
           <Loader2 className="h-20 w-20 animate-spin text-primary" />
         </div>
-        <p className="text-lg font-semibold mt-8 text-foreground">Loading pick history</p>
-        <p className="text-sm text-muted-foreground mt-2 animate-pulse-subtle">Analyzing your performance...</p>
+        <p className="text-lg font-semibold mt-8 text-foreground">
+          Loading pick history
+        </p>
+        <p className="text-sm text-muted-foreground mt-2 animate-pulse-subtle">
+          Analyzing your performance...
+        </p>
       </div>
     );
   }
@@ -79,7 +103,9 @@ export default function HistoryPage() {
             <AlertCircle className="h-16 w-16 text-destructive" />
           </div>
           <h3 className="text-2xl font-bold mb-2">Error loading history</h3>
-          <p className="text-muted-foreground mb-6 text-center max-w-md">{error}</p>
+          <p className="text-muted-foreground mb-6 text-center max-w-md">
+            {error}
+          </p>
           <Button onClick={loadHistory} size="lg" className="shadow-md">
             Try Again
           </Button>
@@ -97,10 +123,11 @@ export default function HistoryPage() {
           </div>
           <h3 className="text-2xl font-bold mb-2">No picks yet</h3>
           <p className="text-muted-foreground mb-6 text-center max-w-md">
-            Start by picking a player from tonight's games and build your history
+            Start by picking a player from tonight&apos;s games and build your
+            history
           </p>
           <Button asChild size="lg" className="shadow-md">
-            <Link href="/">View Tonight's Players</Link>
+            <Link href="/">View Tonight&apos;s Players</Link>
           </Button>
         </CardContent>
       </Card>
@@ -220,10 +247,10 @@ export default function HistoryPage() {
               {history.map((pick, index) => (
                 <TableRow key={index}>
                   <TableCell className="font-medium">
-                    {new Date(pick.date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
+                    {new Date(pick.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
                     })}
                   </TableCell>
                   <TableCell>
@@ -237,8 +264,8 @@ export default function HistoryPage() {
                   </TableCell>
                   <TableCell>
                     <span className="text-muted-foreground">
-                      {pick.is_home ? 'vs' : '@'}
-                    </span>{' '}
+                      {pick.is_home ? "vs" : "@"}
+                    </span>{" "}
                     {pick.opponent}
                   </TableCell>
                   <TableCell className="text-right">
@@ -265,10 +292,10 @@ export default function HistoryPage() {
               <p className="font-medium">Overall Performance</p>
               <p className="text-sm text-muted-foreground">
                 {stats.avgScore >= 40
-                  ? 'Excellent picking strategy! Your average is well above the target.'
+                  ? "Excellent picking strategy! Your average is well above the target."
                   : stats.avgScore >= 30
-                  ? 'Good performance with solid picks. Keep it up!'
-                  : 'Room for improvement. Focus on higher-scoring opportunities.'}
+                  ? "Good performance with solid picks. Keep it up!"
+                  : "Room for improvement. Focus on higher-scoring opportunities."}
               </p>
             </div>
           </div>
@@ -279,7 +306,8 @@ export default function HistoryPage() {
             <div>
               <p className="font-medium">Success Rate</p>
               <p className="text-sm text-muted-foreground">
-                {((stats.above40 / stats.totalPicks) * 100).toFixed(1)}% of your picks scored 40+ points
+                {((stats.above40 / stats.totalPicks) * 100).toFixed(1)}% of your
+                picks scored 40+ points
               </p>
             </div>
           </div>
@@ -290,7 +318,9 @@ export default function HistoryPage() {
             <div>
               <p className="font-medium">Elite Picks</p>
               <p className="text-sm text-muted-foreground">
-                {stats.above50} elite performance{stats.above50 !== 1 ? 's' : ''} (50+ points) out of {stats.totalPicks} total picks
+                {stats.above50} elite performance
+                {stats.above50 !== 1 ? "s" : ""} (50+ points) out of{" "}
+                {stats.totalPicks} total picks
               </p>
             </div>
           </div>
