@@ -8,13 +8,13 @@ import DateNavigation from "@/components/DateNavigation";
 import PlayerFilters, {
   FilterOption,
   SortOption,
-  Game,
 } from "@/components/PlayerFilters";
 import PlayersTable from "@/components/PlayersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getTonightsPlayers, Player, GameInfo } from "@/lib/api";
+import { getSnapshot, SnapshotData } from "@/lib/api";
+import { getPlayersForDate, getGamesForDate } from "@/lib/snapshot";
 import {
   getAllPicks,
   getPickForDate,
@@ -104,20 +104,17 @@ function TableSkeleton() {
 }
 
 interface PlayersViewProps {
-  initialPlayers: Player[];
-  initialGames: GameInfo[];
   initialDate: string;
 }
 
 /**
  * Client component that handles player list interactivity:
+ * - Fetches entire season snapshot once
+ * - Filters by date client-side (instant navigation)
  * - Filtering and sorting
  * - Pick management (localStorage)
- * - Date navigation (re-fetches on date change)
  */
 export default function PlayersView({
-  initialPlayers,
-  initialGames,
   initialDate,
 }: PlayersViewProps) {
   const router = useRouter();
@@ -127,12 +124,10 @@ export default function PlayersView({
   const dateParam = searchParams?.get("date");
   const currentDate = dateParam || initialDate;
 
-  // Player data state
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);
-  const [games, setGames] = useState<GameInfo[]>(initialGames);
-  const [loading, setLoading] = useState(false);
+  // Snapshot data state (fetched once on mount)
+  const [snapshot, setSnapshot] = useState<SnapshotData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [initialDateLoaded, setInitialDateLoaded] = useState(initialDate);
 
   // Filter/sort state
   const [sortBy, setSortBy] = useState<SortOption>("avg-desc");
@@ -166,6 +161,54 @@ export default function PlayersView({
     removePick(currentDate);
     setCurrentPick(null);
   }, [currentDate]);
+
+  // Fetch snapshot once on mount
+  useEffect(() => {
+    const loadSnapshot = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getSnapshot();
+        setSnapshot(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSnapshot();
+  }, []);
+
+  // Handle date validation (but no refetch - just validation)
+  useEffect(() => {
+    if (dateParam) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        router.replace("/");
+        return;
+      }
+      const daysDiff = Math.floor(
+        (new Date(dateParam).getTime() - new Date(initialDate).getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
+      if (daysDiff < -30 || daysDiff > 30) {
+        router.replace("/");
+        return;
+      }
+    }
+  }, [currentDate, dateParam, router, initialDate]);
+
+  // Filter players for current date from snapshot
+  const players = useMemo(() => {
+    if (!snapshot) return [];
+    return getPlayersForDate(snapshot, currentDate);
+  }, [snapshot, currentDate]);
+
+  // Get games for current date
+  const games = useMemo(() => {
+    if (!snapshot) return [];
+    return getGamesForDate(snapshot, currentDate);
+  }, [snapshot, currentDate]);
 
   // Add eligibility info from localStorage
   // currentPick triggers recalc when user picks/unpicks a player
@@ -214,51 +257,6 @@ export default function PlayersView({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [players, currentDate, isHydrated, currentPick]);
-
-  // Fetch players for a date
-  const loadPlayers = useCallback(async (date: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getTonightsPlayers(date);
-      setPlayers(data.players);
-      setGames(data.games);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load players");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Handle date changes and validation
-  useEffect(() => {
-    if (dateParam) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-        router.replace("/");
-        return;
-      }
-      const daysDiff = Math.floor(
-        (new Date(dateParam).getTime() - new Date(initialDate).getTime()) /
-          (1000 * 60 * 60 * 24)
-      );
-      if (daysDiff < -30 || daysDiff > 30) {
-        router.replace("/");
-        return;
-      }
-    }
-
-    if (currentDate !== initialDateLoaded) {
-      loadPlayers(currentDate);
-      setInitialDateLoaded(currentDate);
-    }
-  }, [
-    currentDate,
-    dateParam,
-    router,
-    initialDate,
-    initialDateLoaded,
-    loadPlayers,
-  ]);
 
   // Filter and sort players
   const filteredPlayers = useMemo(() => {
@@ -346,18 +344,18 @@ export default function PlayersView({
               {error}
             </p>
             <Button
-              onClick={() => loadPlayers(currentDate)}
+              onClick={() => window.location.reload()}
               size="lg"
               className="shadow-md"
             >
-              Try Again
+              Reload Page
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Empty state */}
-      {!error && players.length === 0 && (
+      {/* Empty state - only show after loading completes */}
+      {!error && !loading && players.length === 0 && (
         <Card className="animate-slide-up">
           <CardContent className="flex flex-col items-center py-16">
             <div className="p-4 rounded-full bg-muted/50 mb-6">

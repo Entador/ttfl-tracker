@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import PlayersView from "@/components/PlayersView";
-import { getPlayersForDate, getTodayET, PlayersResponse } from "@/lib/api";
+import { getTodayET } from "@/lib/api";
 
 interface PageProps {
   searchParams: Promise<{ date?: string }>;
@@ -39,19 +39,6 @@ function validateDate(dateParam: string | undefined, todayET: string): string | 
   return dateParam;
 }
 
-/**
- * Fetch players with error handling.
- * Returns empty response on error to allow graceful degradation.
- */
-async function fetchPlayers(date: string): Promise<PlayersResponse> {
-  try {
-    return await getPlayersForDate(date);
-  } catch (error) {
-    console.error("Failed to fetch players:", error);
-    return { players: [], games: [] };
-  }
-}
-
 function LoadingFallback() {
   return (
     <div className="flex flex-col items-center justify-center py-24 animate-fade-in">
@@ -68,7 +55,7 @@ function LoadingFallback() {
 
 /**
  * Home page - Server Component.
- * Fetches player data server-side for faster initial render.
+ * Validates date parameter, then hands off to client component which fetches snapshot.
  */
 export default async function HomePage({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -80,16 +67,10 @@ export default async function HomePage({ searchParams }: PageProps) {
     redirect("/");
   }
 
-  // Fetch players on the server
-  const data = await fetchPlayers(validDate);
-
+  // Client component fetches snapshot and filters by date
   return (
     <Suspense fallback={<LoadingFallback />}>
-      <PlayersView
-        initialPlayers={data.players}
-        initialGames={data.games}
-        initialDate={validDate}
-      />
+      <PlayersView initialDate={todayET} />
     </Suspense>
   );
 }

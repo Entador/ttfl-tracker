@@ -122,3 +122,51 @@ export async function getPlayerStats(playerId: number): Promise<PlayerStats> {
 export async function getPickHistory(limit: number = 50): Promise<PickHistory[]> {
   return await fetchAPI<PickHistory[]>(`/api/games/history?limit=${limit}`);
 }
+
+// Snapshot API - returns entire season data
+export interface SnapshotMetadata {
+  generated_at: string;
+  total_players: number;
+  total_games: number;
+  total_teams: number;
+}
+
+export interface PlayerSnapshot {
+  player_id: number;
+  name: string;
+  team: string;
+  team_id: number;
+  avg_ttfl: number;
+  avg_ttfl_l10: number;
+  avg_ttfl_l30d: number;
+  injury_status: string | null;
+  injury_return_date: string | null;
+  injury_details: string | null;
+}
+
+export interface GameSnapshot {
+  game_date: string;
+  home_team: string;
+  away_team: string;
+  home_team_id: number;
+  away_team_id: number;
+}
+
+export interface TeamSnapshot {
+  team_id: number;
+  abbreviation: string;
+  full_name: string;
+  pace: number;
+  def_rating: number;
+}
+
+export interface SnapshotData {
+  metadata: SnapshotMetadata;
+  players: PlayerSnapshot[];
+  games: GameSnapshot[];
+  teams: TeamSnapshot[];
+}
+
+export async function getSnapshot(): Promise<SnapshotData> {
+  return fetchAPI<SnapshotData>('/api/snapshot');
+}
