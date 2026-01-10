@@ -60,22 +60,27 @@ export default function PlayerFilters({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Filter badges */}
       <div className="flex flex-wrap gap-1.5 sm:gap-2 pb-1 sm:pb-0">
-        {typeof gamesCount === "number" && gamesCount > 0 && (
-          <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-              <button className="inline-flex items-center gap-1 sm:gap-1.5 px-1.5 py-1 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-full border border-input hover:bg-accent transition-colors shrink-0">
-                <Trophy className="h-3 w-3" />
-                <span className="text-[11px] sm:text-xs">
-                  {selectedGameData ? (
-                    <span className="font-mono">
-                      {selectedGameData.awayTeam} @ {selectedGameData.homeTeam}
-                    </span>
-                  ) : (
-                    `${gamesCount} ${gamesCount === 1 ? "game" : "games"}`
-                  )}
-                </span>
-              </button>
-            </PopoverTrigger>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-1.5 py-1 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-full border border-input hover:bg-accent transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={gamesCount === null}
+            >
+              <Trophy className="h-3 w-3" />
+              <span className="text-[11px] sm:text-xs">
+                {gamesCount === null ? (
+                  "— games"
+                ) : selectedGameData ? (
+                  <span className="font-mono">
+                    {selectedGameData.awayTeam} @ {selectedGameData.homeTeam}
+                  </span>
+                ) : (
+                  `${gamesCount} ${gamesCount === 1 ? "game" : "games"}`
+                )}
+              </span>
+            </button>
+          </PopoverTrigger>
+          {typeof gamesCount === "number" && gamesCount > 0 && (
             <PopoverContent align="start" className="w-40 p-1" sideOffset={4}>
               <div className="space-y-0">
                 {/* All games option */}
@@ -118,8 +123,8 @@ export default function PlayerFilters({
                 })}
               </div>
             </PopoverContent>
-          </Popover>
-        )}
+          )}
+        </Popover>
         <Badge
           variant={filterBy === "available" ? "default" : "outline"}
           className="cursor-pointer shrink-0 px-2 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs"
