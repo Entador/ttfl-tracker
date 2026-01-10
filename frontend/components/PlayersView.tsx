@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle, Calendar } from "lucide-react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -14,13 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSnapshot, SnapshotData } from "@/lib/api";
-import { getPlayersForDate, getGamesForDate } from "@/lib/snapshot";
-import {
-  getAllPicks,
-  getPickForDate,
-  removePick,
-  savePick,
-} from "@/lib/picks";
+import { getAllPicks, getPickForDate, removePick, savePick } from "@/lib/picks";
+import { getGamesForDate, getPlayersForDate } from "@/lib/snapshot";
 
 function TableSkeleton() {
   return (
@@ -114,9 +110,7 @@ interface PlayersViewProps {
  * - Filtering and sorting
  * - Pick management (localStorage)
  */
-export default function PlayersView({
-  initialDate,
-}: PlayersViewProps) {
+export default function PlayersView({ initialDate }: PlayersViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -227,11 +221,16 @@ export default function PlayersView({
     const from = new Date(currentDate);
 
     // Build map of playerId -> last pick date within 30-day window
-    const eligibilityMap = new Map<number, { lastPickedDate: string; daysUntilEligible: number }>();
+    const eligibilityMap = new Map<
+      number,
+      { lastPickedDate: string; daysUntilEligible: number }
+    >();
 
-    allPicks.forEach(pick => {
+    allPicks.forEach((pick) => {
       const pickDate = new Date(pick.date);
-      const diffDays = Math.floor((from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.floor(
+        (from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
 
       // Pick counts if it was 1-29 days ago (within 30-day window, but NOT same day)
       if (diffDays > 0 && diffDays < 30) {
@@ -240,7 +239,7 @@ export default function PlayersView({
         if (!existing || pick.date > existing.lastPickedDate) {
           eligibilityMap.set(pick.playerId, {
             lastPickedDate: pick.date,
-            daysUntilEligible: 30 - diffDays
+            daysUntilEligible: 30 - diffDays,
           });
         }
       }
@@ -326,9 +325,21 @@ export default function PlayersView({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl sm:text-xl font-bold tracking-tight">
-          Pick Dashboard
-        </h1>
+        <div className="flex items-center sm:gap-5 gap-3">
+          <h1 className="text-xs sm:text-xs font-bold tracking-tight">
+            Pick Dashboard
+          </h1>
+          {(loading || !isHydrated) && (
+            <Image
+              src="/fail.gif"
+              alt="Loading..."
+              width={60}
+              height={60}
+              unoptimized
+              className="w-8 h-8 sm:w-15 sm:h-15"
+            />
+          )}
+        </div>
         <DateNavigation currentDate={currentDate} />
       </div>
 
