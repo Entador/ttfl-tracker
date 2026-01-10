@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. Modify it if necessary and for relevant changes.
 
 ## Project Overview
 
@@ -90,7 +90,8 @@ backend/
 ```
 
 **Key API Endpoints:**
-- `GET /api/players/tonight` - Tonight's players with eligibility and avg TTFL
+- `GET /api/snapshot` - **Primary endpoint**: Returns entire season data (all players, games, teams) in one response for client-side filtering (30 KB)
+- `GET /api/players/tonight` - Tonight's players with eligibility and avg TTFL (legacy endpoint)
 - `GET /api/players/{player_id}/stats` - Recent game history for a player
 - `POST /api/games/pick` - Record a player pick
 - `GET /api/games/history` - User's pick history
@@ -101,34 +102,47 @@ backend/
 frontend/
 ├── app/
 │   ├── layout.tsx          # Root layout with metadata
-│   ├── page.tsx            # Main page: tonight's players
+│   ├── page.tsx            # Main page: dashboard with date navigation
 │   ├── history/
 │   │   └── page.tsx        # Pick history
 │   └── players/[id]/
 │       └── page.tsx        # Player detail page
-├── components/             # React components (PlayerCard, etc.)
+├── components/
+│   ├── PlayersView.tsx     # Client component: snapshot fetching, filtering, sorting
+│   ├── PlayersTable.tsx    # Table display with skeleton loader
+│   ├── PlayerFilters.tsx   # Sort/filter controls including game filter
+│   └── ...                 # Other components
 └── lib/
-    └── api.ts              # API client functions
+    ├── api.ts              # API client functions
+    ├── snapshot.ts         # Client-side snapshot filtering utilities
+    └── picks.ts            # localStorage pick management
 ```
 
 **Routing**: Uses Next.js App Router (file-based routing)
 
 ### Data Flow
 
-The app follows a **database-first architecture** where the backend serves data from the database, and a separate daily script updates the database with fresh data from the NBA API.
+The app uses a **snapshot-based architecture** optimized for instant navigation:
 
 **Daily Update Cycle (via GitHub Actions cron):**
 1. **NBA API → Daily Script**: `daily_update.py` fetches game data, scores, and injury info
 2. **Daily Script → Database**: Updates game statuses, TTFL scores, team stats, and injuries
 3. **TTFL Score Calculation**: Raw NBA stats → `ttfl.calculate_ttfl_score()` → stored in database
 
-**Request Flow (Backend API):**
-1. **Frontend → Backend API**: API calls via `/lib/api.ts` to FastAPI endpoints
-2. **Backend Router → Database**: Routers query database using SQLAlchemy models
-3. **Backend Router → Services**: Calculate derived values (averages, projections) from DB data
-4. **Backend → Frontend**: JSON response with player/game data
+**Backend In-Memory Cache:**
+- On startup, backend loads entire season's games, teams, and players into memory
+- Cache includes: game schedules, team stats, player rosters (static/semi-static data)
+- TTFL score calculations still query DB (dynamic data)
+- Significantly reduces database load for read operations
 
-**Key Principle**: Backend routers read from the database, not from NBA API directly (except for optional demo mode).
+**Request Flow (Snapshot Architecture):**
+1. **Frontend Initial Load**: Single `GET /api/snapshot` call fetches all season data (~30 KB JSON)
+2. **Backend Response**: Combines cached data (games, teams, players) + DB queries (TTFL averages)
+3. **Client-Side Filtering**: Frontend filters snapshot by date in memory (instant, no API calls)
+4. **Date Navigation**: URL changes (`?date=YYYY-MM-DD`) trigger client-side filter only
+5. **Pick Management**: localStorage tracks picks, eligibility calculated client-side
+
+**Key Principle**: Backend serves data from in-memory cache + database, not from NBA API directly (except for optional demo mode).
 
 ### Database Schema
 
@@ -184,11 +198,24 @@ def endpoint(db: Session = Depends(get_db)):
 
 Some endpoints use `get_optional_db()` to work without a database (API-only mode).
 
+### In-Memory Cache
+
+The backend pre-loads static/semi-static data on startup (`services/cache.py`):
+- **Cached**: Game schedules, teams, player rosters (reduces DB queries)
+- **Not cached**: TTFL scores and averages (queried from DB as they change frequently)
+- Cache is refreshed by redeploying after daily updates
+
 ### NBA API Rate Limiting
 
 The NBA API has rate limits and is only called by the daily update script and other maintenance scripts (not by the backend API during normal operation). The `nba_api.py` service includes a 0.6s delay between requests. The daily update script has retry logic with exponential backoff for timeout errors. If you get errors when running scripts manually, wait a few minutes before retrying.
 
 ### Frontend Data Fetching
+
+The app uses a **fetch-once, filter-client-side** pattern:
+- Single `GET /api/snapshot` call on page load fetches entire season data
+- Date navigation filters cached data in-browser (instant, no API calls)
+- localStorage manages picks and eligibility calculations
+- Skeleton loader displays during initial data fetch
 
 Next.js App Router uses Server Components by default. Client-side fetching is done in components marked with `'use client'` directive.
 
