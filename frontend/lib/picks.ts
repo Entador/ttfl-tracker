@@ -105,3 +105,44 @@ export function getDaysUntilEligible(playerId: number, forDate: string): number 
 
   return 30 - daysSincePick;
 }
+
+/**
+ * Import multiple picks at once.
+ * Merges with existing picks, replacing duplicates by date.
+ * Keeps only the last 30 days of picks from today.
+ */
+export function importPicks(newPicks: Pick[]): { imported: number; skipped: number } {
+  const existingPicks = getAllPicks();
+  const today = new Date();
+  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  // Create a map of date -> pick for both existing and new picks
+  const picksByDate = new Map<string, Pick>();
+
+  // Add existing picks
+  existingPicks.forEach(pick => {
+    picksByDate.set(pick.date, pick);
+  });
+
+  // Add/override with new picks
+  let imported = 0;
+  let skipped = 0;
+
+  newPicks.forEach(pick => {
+    const pickDate = new Date(pick.date);
+
+    // Only import picks from the last 30 days
+    if (pickDate >= thirtyDaysAgo && pickDate <= today) {
+      picksByDate.set(pick.date, pick);
+      imported++;
+    } else {
+      skipped++;
+    }
+  });
+
+  // Convert back to array and save
+  const allPicks = Array.from(picksByDate.values());
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(allPicks));
+
+  return { imported, skipped };
+}

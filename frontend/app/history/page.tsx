@@ -6,13 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ScoreBadge } from '@/components/ScoreBadge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, Loader2, TrendingUp, Target, Trophy, Calendar } from 'lucide-react';
+import { AlertCircle, Loader2, TrendingUp, Target, Trophy, Calendar, Upload } from 'lucide-react';
 import Link from 'next/link';
+import ImportPicks from '@/components/ImportPicks';
 
 export default function HistoryPage() {
   const [history, setHistory] = useState<PickHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     loadHistory();
