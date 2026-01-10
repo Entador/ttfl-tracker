@@ -2,10 +2,21 @@ name: Daily Database Update
 
 on:
   schedule:
-    # Run daily at 8:00 UTC (9:00 Paris time)
+    # Run full update daily at 8:00 UTC (9:00 AM Paris time)
     - cron: '0 8 * * *'
+    # Run injury update at 19:00 UTC (8:00 PM Paris time)
+    - cron: '0 19 * * *'
   workflow_dispatch:
     # Allow manual trigger from GitHub UI
+    inputs:
+      update_type:
+        description: 'Type of update to run'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - injuries-only
 
 jobs:
   update:
@@ -48,9 +59,30 @@ jobs:
             echo "PROXY_URL is configured (length: ${#PROXY_URL})"
           fi
 
-      - name: Run daily update script
+      - name: Determine update type
+        id: update_type
+        run: |
+          # Manual trigger uses input, scheduled uses schedule time
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ inputs.update_type }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "0 19 * * *" ]; then
+            echo "type=injuries-only" >> $GITHUB_OUTPUT
+          else
+            echo "type=full" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run full daily update
+        if: steps.update_type.outputs.type == 'full'
         working-directory: backend
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PROXY_URL: ${{ secrets.PROXY_URL }}
         run: poetry run python scripts/daily_update.py
+
+      - name: Run injury update only
+        if: steps.update_type.outputs.type == 'injuries-only'
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+        run: poetry run python scripts/daily_update.py --injuries-only
