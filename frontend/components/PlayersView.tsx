@@ -132,8 +132,27 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [currentPick, setCurrentPick] = useState<number | null>(null);
 
+  // Loading gif fade-out state
+  const [showLoadingGif, setShowLoadingGif] = useState(true);
+  const [fadingOut, setFadingOut] = useState(false);
+
   // Mark hydrated after mount
   useEffect(() => setIsHydrated(true), []);
+
+  // Handle loading gif fade-out transition
+  useEffect(() => {
+    if (!loading && isHydrated) {
+      // Start fade-out animation
+      setFadingOut(true);
+
+      // Hide gif completely after animation completes
+      const timer = setTimeout(() => {
+        setShowLoadingGif(false);
+      }, 400); // Match this with CSS transition duration
+
+      return () => clearTimeout(timer);
+    }
+  }, [loading, isHydrated]);
 
   // Load pick from localStorage when date changes
   useEffect(() => {
@@ -329,14 +348,16 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
           <h1 className="text-xs sm:text-xs font-bold tracking-tight">
             Pick Dashboard
           </h1>
-          {(loading || !isHydrated) && (
+          {showLoadingGif && (
             <Image
               src="/fail.gif"
               alt="Loading..."
               width={60}
               height={60}
               unoptimized
-              className="w-8 h-8 sm:w-15 sm:h-15"
+              className={`w-8 h-8 sm:w-15 sm:h-15 transition-all duration-400 ${
+                fadingOut ? "opacity-0 scale-0" : "opacity-100 scale-100"
+              }`}
             />
           )}
         </div>
