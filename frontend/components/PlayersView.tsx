@@ -317,13 +317,15 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     return filtered;
   }, [playersWithEligibility, sortBy, filterBy, selectedGame]);
 
-  const availableCount = isHydrated
+  const availableCount = !loading && isHydrated
     ? playersWithEligibility.filter((p) => p.is_eligible).length
     : null;
 
-  const lockedCount = isHydrated
+  const lockedCount = !loading && isHydrated
     ? playersWithEligibility.filter((p) => !p.is_eligible).length
     : null;
+
+  const totalCount = !loading && isHydrated ? players.length : null;
 
   // Convert backend games to frontend format
   const gamesForFilter = useMemo(() => {
@@ -345,7 +347,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center sm:gap-5 gap-3">
-          <h1 className="text-xs sm:text-xs font-bold tracking-tight">
+          <h1 className="text-2xl! sm:text-5xl! font-bold tracking-tight">
             Pick Dashboard
           </h1>
           {showLoadingGif && (
@@ -408,10 +410,10 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
         onSortChange={setSortBy}
         filterBy={filterBy}
         onFilterChange={setFilterBy}
-        totalCount={players.length ?? null}
+        totalCount={totalCount}
         availableCount={availableCount}
         lockedCount={lockedCount}
-        gamesCount={players.length > 0 ? gamesCount : null}
+        gamesCount={!loading && isHydrated && players.length > 0 ? gamesCount : null}
         games={gamesForFilter}
         selectedGame={selectedGame}
         onGameChange={setSelectedGame}
