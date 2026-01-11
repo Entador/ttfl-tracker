@@ -129,6 +129,7 @@ export interface SnapshotMetadata {
   total_players: number;
   total_games: number;
   total_teams: number;
+  injury_updated_at: string | null;
 }
 
 export interface PlayerSnapshot {

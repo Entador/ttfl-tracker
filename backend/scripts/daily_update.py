@@ -60,7 +60,7 @@ from sqlalchemy import and_
 from nba_api.stats.endpoints import scheduleleaguev2
 
 from models.database import SessionLocal
-from models import Team, Player, Game, TTFLScore
+from models import Team, Player, Game, TTFLScore, AppMetadata
 from services.nba_api import get_current_season, get_all_team_stats, get_game_box_scores, get_player_stats, get_proxy_url
 from services.ttfl import calculate_ttfl_score
 from services.injuries import update_player_injuries
@@ -461,6 +461,18 @@ def update_injuries(db: Session, dry_run: bool = False) -> dict:
 
     try:
         result = update_player_injuries(db)
+
+        # Update the injury metadata timestamp
+        metadata = db.query(AppMetadata).filter(AppMetadata.key == "injury_updated_at").first()
+        if metadata:
+            metadata.value = datetime.now(timezone.utc).isoformat()
+        else:
+            metadata = AppMetadata(
+                key="injury_updated_at",
+                value=datetime.now(timezone.utc).isoformat()
+            )
+            db.add(metadata)
+        db.commit()
 
         print(f"\nResults:")
         print(f"  Updated: {result['updated']}")

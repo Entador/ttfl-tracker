@@ -76,3 +76,11 @@ class TTFLScore(Base):
 
     player = relationship("Player", back_populates="ttfl_scores")
     game = relationship("Game")
+
+class AppMetadata(Base):
+    __tablename__ = "app_metadata"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, nullable=False, index=True)
+    value = Column(String, nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

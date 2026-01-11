@@ -11,6 +11,23 @@ import { Player } from "@/lib/api";
 
 const LOGO_SIZE = 32;
 
+function formatInjuryDetails(details: string) {
+  // Split by the words we want to bold, keeping the delimiters
+  const parts = details.split(/\b(questionable|probable)\b/gi);
+
+  return parts.map((part, i) => {
+    const lower = part.toLowerCase();
+    if (lower === "questionable" || lower === "probable") {
+      return (
+        <strong key={i} className="font-bold">
+          {part}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+
 function InjuryBadge({
   status,
   returnDate,
@@ -43,7 +60,7 @@ function InjuryBadge({
             )}
             {details && (
               <div className="text-xs text-muted-foreground leading-relaxed wrap-break-word">
-                {details}
+                {formatInjuryDetails(details)}
               </div>
             )}
           </div>

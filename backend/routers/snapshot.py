@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
 from models.database import get_db
+from models import AppMetadata
 from services.cache import app_cache
 from services.player_stats import batch_calculate_averages
 
@@ -24,7 +25,8 @@ def get_snapshot(db: Session = Depends(get_db)):
                 "generated_at": ISO timestamp,
                 "total_players": int,
                 "total_games": int,
-                "total_teams": int
+                "total_teams": int,
+                "injury_updated_at": ISO timestamp or null
             },
             "players": [player objects with TTFL stats],
             "games": [all games for the season],
@@ -46,6 +48,10 @@ def get_snapshot(db: Session = Depends(get_db)):
 
         # Get all teams from cache
         all_teams = list(app_cache.teams_by_id.values())
+
+        # Get injury update timestamp
+        injury_metadata = db.query(AppMetadata).filter(AppMetadata.key == "injury_updated_at").first()
+        injury_updated_at = injury_metadata.value if injury_metadata else None
 
         # Build players response
         players_data = []
@@ -97,6 +103,7 @@ def get_snapshot(db: Session = Depends(get_db)):
                 'total_players': len(players_data),
                 'total_games': len(games_data),
                 'total_teams': len(teams_data),
+                'injury_updated_at': injury_updated_at,
             },
             'players': players_data,
             'games': games_data,

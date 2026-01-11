@@ -317,13 +317,15 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     return filtered;
   }, [playersWithEligibility, sortBy, filterBy, selectedGame]);
 
-  const availableCount = !loading && isHydrated
-    ? playersWithEligibility.filter((p) => p.is_eligible).length
-    : null;
+  const availableCount =
+    !loading && isHydrated
+      ? playersWithEligibility.filter((p) => p.is_eligible).length
+      : null;
 
-  const lockedCount = !loading && isHydrated
-    ? playersWithEligibility.filter((p) => !p.is_eligible).length
-    : null;
+  const lockedCount =
+    !loading && isHydrated
+      ? playersWithEligibility.filter((p) => !p.is_eligible).length
+      : null;
 
   const totalCount = !loading && isHydrated ? players.length : null;
 
@@ -342,26 +344,60 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
 
   const gamesCount = games.length;
 
+  // Format injury update timestamp in France time
+  const injuryUpdateTime = snapshot?.metadata.injury_updated_at
+    ? (() => {
+        const date = new Date(snapshot.metadata.injury_updated_at);
+        return date.toLocaleString("en-US", {
+          timeZone: "Europe/Paris",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        });
+      })()
+    : null;
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center sm:gap-5 gap-3">
-          <h1 className="text-2xl! sm:text-5xl! font-bold tracking-tight">
-            Pick Dashboard
-          </h1>
-          {showLoadingGif && (
-            <Image
-              src="/fail.gif"
-              alt="Loading..."
-              width={60}
-              height={60}
-              unoptimized
-              className={`w-8 h-8 sm:w-15 sm:h-15 transition-all duration-400 ${
-                fadingOut ? "opacity-0 scale-0" : "opacity-100 scale-100"
-              }`}
-            />
-          )}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center sm:gap-5 gap-3">
+            <h1 className="text-2xl! sm:text-5xl! font-bold tracking-tight">
+              Pick Dashboard
+            </h1>
+            {showLoadingGif && (
+              <Image
+                src="/fail.gif"
+                alt="Loading..."
+                width={60}
+                height={60}
+                unoptimized
+                className={`w-8 h-8 sm:w-12 sm:h-12 transition-all duration-400 ${
+                  fadingOut ? "opacity-0 scale-0" : "opacity-100 scale-100"
+                }`}
+              />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Injury statuses updated
+            {loading ? (
+              <span className="inline-flex ml-2 gap-0.5">
+                <span className="animate-bounce [animation-delay:0ms]">•</span>
+                <span className="animate-bounce [animation-delay:150ms]">
+                  •
+                </span>
+                <span className="animate-bounce [animation-delay:300ms]">
+                  •
+                </span>
+              </span>
+            ) : injuryUpdateTime ? (
+              ` ${injuryUpdateTime}`
+            ) : (
+              ""
+            )}
+          </p>
         </div>
         <DateNavigation currentDate={currentDate} />
       </div>
@@ -413,7 +449,9 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
         totalCount={totalCount}
         availableCount={availableCount}
         lockedCount={lockedCount}
-        gamesCount={!loading && isHydrated && players.length > 0 ? gamesCount : null}
+        gamesCount={
+          !loading && isHydrated && players.length > 0 ? gamesCount : null
+        }
         games={gamesForFilter}
         selectedGame={selectedGame}
         onGameChange={setSelectedGame}
