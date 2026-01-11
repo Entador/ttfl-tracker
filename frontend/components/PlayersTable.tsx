@@ -150,7 +150,7 @@ export default function PlayersTable({
   const statRanges = useStatRanges(players);
 
   return (
-    <div className="relative">
+    <div className="relative animate-fade-in">
       {loading && (
         <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-lg">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -287,33 +287,33 @@ export default function PlayersTable({
                       isIneligible ? "opacity-50" : ""
                     }`}
                   >
-                  {!isHydrated ? (
-                    <span className="text-xs text-muted-foreground">—</span>
-                  ) : currentPick === player.player_id ? (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="h-6 px-2 text-xs"
-                      onClick={onRemovePick}
-                    >
-                      ✓
-                    </Button>
-                  ) : player.is_eligible ? (
-                    <Button
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => onPickPlayer(player.player_id)}
-                    >
-                      Pick
-                    </Button>
-                  ) : (
-                    <span className="inline-flex items-center justify-center h-6 text-xs text-muted-foreground tabular-nums">
-                      {player.days_until_eligible}d
-                    </span>
-                  )}
-                </td>
-              </tr>
-            );
+                    {!isHydrated ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : currentPick === player.player_id ? (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="h-6 px-2 text-xs"
+                        onClick={onRemovePick}
+                      >
+                        ✓
+                      </Button>
+                    ) : player.is_eligible ? (
+                      <Button
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => onPickPlayer(player.player_id)}
+                      >
+                        Pick
+                      </Button>
+                    ) : (
+                      <span className="inline-flex items-center justify-center h-6 text-xs text-muted-foreground tabular-nums">
+                        {player.days_until_eligible}d
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
             })}
           </tbody>
         </table>

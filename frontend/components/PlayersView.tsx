@@ -381,7 +381,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Injury statuses updated
+            Last injury statuses updated :
             {loading ? (
               <span className="inline-flex ml-2 gap-0.5">
                 <span className="animate-bounce [animation-delay:0ms]">•</span>
