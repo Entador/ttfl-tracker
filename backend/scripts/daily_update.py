@@ -6,6 +6,7 @@ Maintains the database by:
 2. Populating TTFL scores for completed games
 3. Updating team defensive stats
 4. Updating player injury statuses from ESPN
+5. Updating player teams to track trades
 
 Designed to run daily via GitHub Actions cron job.
 
@@ -17,6 +18,7 @@ Options:
     --scores-only     Only populate TTFL scores
     --stats-only      Only update team stats
     --injuries-only   Only update injury statuses
+    --trades-only     Only update player trades
     --dry-run         Show what would be done without making changes
 """
 
@@ -57,7 +59,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from nba_api.stats.endpoints import scheduleleaguev2
+from nba_api.stats.endpoints import scheduleleaguev2, commonteamroster
+from nba_api.stats.static import teams
 
 from models.database import SessionLocal
 from models import Team, Player, Game, TTFLScore, AppMetadata
@@ -492,16 +495,154 @@ def update_injuries(db: Session, dry_run: bool = False) -> dict:
         return {"updated": 0, "cleared": 0, "not_found": [], "error": str(e)}
 
 
+def update_player_trades(db: Session, dry_run: bool = False) -> dict:
+    """
+    Update player teams based on current NBA rosters to track trades.
+
+    Fetches current rosters from NBA API and updates player team_id if they've been traded.
+
+    Returns:
+        Dict with update stats: {'checked': int, 'trades': int, 'errors': list}
+    """
+    print("\n" + "=" * 50)
+    print("Phase 5: Update Player Trades")
+    print("=" * 50)
+
+    season = get_current_season()
+    print(f"Season: {season}")
+
+    # Get all NBA teams
+    all_nba_teams = teams.get_teams()
+    print(f"Checking rosters for {len(all_nba_teams)} teams...")
+
+    # Pre-load all teams from database for efficient lookup
+    db_teams = db.query(Team).all()
+    team_map_by_nba_id = {t.nba_team_id: t for t in db_teams}
+
+    # Pre-load all players from database
+    db_players = db.query(Player).all()
+    player_map = {p.nba_player_id: p for p in db_players}
+
+    players_checked = 0
+    trades_detected = 0
+    errors = []
+    trade_details = []
+
+    for nba_team in all_nba_teams:
+        nba_team_id = nba_team['id']
+        team_abbr = nba_team['abbreviation']
+
+        # Find corresponding team in our database
+        db_team = team_map_by_nba_id.get(nba_team_id)
+        if not db_team:
+            print(f"  [skip] {team_abbr} - not in database")
+            continue
+
+        print(f"  Checking {team_abbr}...", end=" ")
+
+        try:
+            # Fetch current roster from NBA API
+            time.sleep(0.6)  # Rate limiting
+
+            @retry_on_timeout(max_retries=3, base_delay=5.0)
+            def fetch_roster():
+                roster = commonteamroster.CommonTeamRoster(
+                    team_id=nba_team_id,
+                    season=season,
+                    proxy=get_proxy_url(),
+                    timeout=60
+                )
+                return roster.common_team_roster.get_data_frame()
+
+            roster_df = fetch_roster()
+
+            if roster_df.empty:
+                print("no roster data")
+                continue
+
+            team_trades = 0
+
+            # Check each player in the roster
+            for _, row in roster_df.iterrows():
+                nba_player_id = int(row['PLAYER_ID'])
+                player_name = row['PLAYER']
+
+                # Check if player exists in our database
+                db_player = player_map.get(nba_player_id)
+                if not db_player:
+                    # Player not in our database yet (could be a rookie or two-way player)
+                    continue
+
+                players_checked += 1
+
+                # Check if player's team has changed
+                if db_player.team_id != db_team.id:
+                    # Trade detected!
+                    old_team = next((t for t in db_teams if t.id == db_player.team_id), None)
+                    old_team_name = old_team.abbreviation if old_team else "Unknown"
+
+                    trade_details.append({
+                        'player_name': player_name,
+                        'old_team': old_team_name,
+                        'new_team': team_abbr
+                    })
+
+                    if not dry_run:
+                        db_player.team_id = db_team.id
+
+                    trades_detected += 1
+                    team_trades += 1
+
+            if team_trades > 0:
+                print(f"{team_trades} trade(s) detected")
+            else:
+                print("OK")
+
+        except Exception as e:
+            error_msg = f"{team_abbr}: {str(e)}"
+            errors.append(error_msg)
+            print(f"error: {e}")
+            continue
+
+    if not dry_run and trades_detected > 0:
+        db.commit()
+
+    # Print trade summary
+    print(f"\n{'=' * 50}")
+    print("Trade Summary:")
+    print(f"  Players checked: {players_checked}")
+    print(f"  Trades detected: {trades_detected}")
+
+    if trade_details:
+        print("\nTrades:")
+        for trade in trade_details:
+            print(f"  • {trade['player_name']}: {trade['old_team']} → {trade['new_team']}")
+
+    if errors:
+        print(f"\nErrors: {len(errors)}")
+        for error in errors[:5]:
+            print(f"  - {error}")
+        if len(errors) > 5:
+            print(f"  ... and {len(errors) - 5} more")
+
+    return {
+        'checked': players_checked,
+        'trades': trades_detected,
+        'errors': errors
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Daily TTFL database update")
     parser.add_argument("--games-only", action="store_true", help="Only update game statuses")
     parser.add_argument("--scores-only", action="store_true", help="Only populate TTFL scores")
     parser.add_argument("--stats-only", action="store_true", help="Only update team stats")
     parser.add_argument("--injuries-only", action="store_true", help="Only update injury statuses")
+    parser.add_argument("--trades-only", action="store_true", help="Only update player trades")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be done without making changes")
     args = parser.parse_args()
 
-    run_all = not any([args.games_only, args.scores_only, args.stats_only, args.injuries_only])
+    run_all = not any([args.games_only, args.scores_only, args.stats_only, args.injuries_only, args.trades_only])
 
     print("=" * 50)
     print("TTFL Daily Update Script")
@@ -528,6 +669,10 @@ def main():
         # Phase 4: Update injuries
         if run_all or args.injuries_only:
             update_injuries(db, dry_run=args.dry_run)
+
+        # Phase 5: Update player trades
+        if run_all or args.trades_only:
+            update_player_trades(db, dry_run=args.dry_run)
 
         print("\n" + "=" * 50)
         print(f"Completed: {datetime.now(timezone.utc).isoformat()}")
