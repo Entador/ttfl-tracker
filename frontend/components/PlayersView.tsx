@@ -359,10 +359,10 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col sm:gap-1">
           <div className="flex items-center sm:gap-5 gap-3">
             <h1 className="text-2xl! sm:text-5xl! font-bold tracking-tight">
               Pick Dashboard

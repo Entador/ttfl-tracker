@@ -57,21 +57,21 @@ export default function PlayerFilters({
   const selectedGameData = games.find((g) => g.key === selectedGame);
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Filter badges */}
-      <div className="flex flex-wrap gap-1.5 sm:gap-2 pb-1 sm:pb-0">
+      <div className="flex flex-wrap gap-1.5 sm:gap-2">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <button
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-1.5 py-1 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-full border border-input hover:bg-accent transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2 text-xs font-medium rounded-full border border-input hover:bg-accent transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed leading-none"
               disabled={gamesCount === null}
             >
               <Trophy className="h-3 w-3" />
-              <span className="text-[11px] sm:text-xs">
+              <span className="text-[11px] sm:text-xs leading-none">
                 {gamesCount === null ? (
                   "— games"
                 ) : selectedGameData ? (
-                  <span className="font-mono">
+                  <span className="font-mono leading-none">
                     {selectedGameData.awayTeam} @ {selectedGameData.homeTeam}
                   </span>
                 ) : (
@@ -127,21 +127,21 @@ export default function PlayerFilters({
         </Popover>
         <Badge
           variant={filterBy === "available" ? "default" : "outline"}
-          className="cursor-pointer shrink-0 px-2 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs"
+          className="cursor-pointer shrink-0 px-2 sm:px-3 py-2 sm:py-2 text-[11px] sm:text-xs leading-none"
           onClick={() => onFilterChange("available")}
         >
           Available: {availableCount ?? "—"}
         </Badge>
         <Badge
           variant={filterBy === "all" ? "default" : "outline"}
-          className="cursor-pointer shrink-0 px-2 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs"
+          className="cursor-pointer shrink-0 px-2 sm:px-3 py-2 sm:py-2 text-[11px] sm:text-xs leading-none"
           onClick={() => onFilterChange("all")}
         >
           All: {totalCount ?? "—"}
         </Badge>
         <Badge
           variant={filterBy === "locked" ? "default" : "outline"}
-          className="cursor-pointer shrink-0 px-2 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs"
+          className="cursor-pointer shrink-0 px-2 sm:px-3 py-2 sm:py-2 text-[11px] sm:text-xs leading-none"
           onClick={() => onFilterChange("locked")}
         >
           Locked: {lockedCount ?? "—"}

@@ -19,26 +19,26 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-background">
         <nav className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-md shadow-sm">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="container mx-auto px-3 sm:px-6 lg:px-8">
             <div className="flex h-16 items-center justify-between">
               <Link
                 href="/"
-                className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl font-bold tracking-tight hover:text-primary transition-colors"
+                className="flex items-center gap-2 sm:gap-2 text-base sm:text-xl font-bold tracking-tight hover:text-primary transition-colors"
               >
                 <PiBasketball className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
-                <span>TTFL Tracker</span>
+                <p>TTFL Tracker</p>
               </Link>
-              <div className="flex gap-1 sm:gap-2">
+              <div className="flex text-sm sm:text-base gap-3 sm:gap-6">
                 <Link
                   href="/"
-                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+                  className="flex items-center gap-1 px-1 sm:px-2 sm:gap-1.5 py-2 font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                 >
                   <PiCourtBasketball size={20} />
                   <span>Dashboard</span>
                 </Link>
                 <Link
                   href="/history"
-                  className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-sm font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+                  className="flex items-center gap-1 px-1 sm:px-2 sm:gap-1.5 py-2 font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                 >
                   <Clock className="h-4 w-4" />
                   <span>History</span>
@@ -47,7 +47,7 @@ export default function RootLayout({
             </div>
           </div>
         </nav>
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-8">
           {children}
         </main>
         <footer className="border-t mt-16 bg-muted/30">
