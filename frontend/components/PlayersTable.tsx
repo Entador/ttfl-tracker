@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useMemo } from "react";
 
 import { PlayerInfo } from "@/components/PlayerInfo";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -82,11 +81,17 @@ interface StatRange {
   median: number;
 }
 
+interface StatRanges {
+  pace: StatRange;
+  defRating: StatRange;
+}
+
 interface PlayersTableProps {
   players: PlayerWithEligibility[];
   currentPick: number | null;
   isHydrated: boolean;
   loading: boolean;
+  statRanges: StatRanges;
   onPickPlayer: (playerId: number) => void;
   onRemovePick: () => void;
 }
@@ -111,43 +116,15 @@ function getStatBgColor(value: number | null, stats: StatRange): string {
   }
 }
 
-/**
- * Calculate stat ranges for color gradients.
- */
-function useStatRanges(players: PlayerWithEligibility[]) {
-  return useMemo(() => {
-    const paces = players
-      .map((p) => p.opp_pace)
-      .filter((v): v is number => v !== null);
-    const defRatings = players
-      .map((p) => p.opp_def_rating)
-      .filter((v): v is number => v !== null);
-
-    const getStats = (values: number[]): StatRange => {
-      if (values.length === 0) return { min: 0, max: 0, median: 0 };
-      const sorted = [...values].sort((a, b) => a - b);
-      const mid = Math.floor(sorted.length / 2);
-      const median =
-        sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-      return { min: sorted[0], max: sorted[sorted.length - 1], median };
-    };
-
-    return {
-      pace: getStats(paces),
-      defRating: getStats(defRatings),
-    };
-  }, [players]);
-}
-
 export default function PlayersTable({
   players,
   currentPick,
   isHydrated,
   loading,
+  statRanges,
   onPickPlayer,
   onRemovePick,
 }: PlayersTableProps) {
-  const statRanges = useStatRanges(players);
 
   return (
     <div className="relative animate-fade-in">

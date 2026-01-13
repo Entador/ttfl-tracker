@@ -8,6 +8,7 @@ const STORAGE_KEY = 'ttfl-picks';
 export interface Pick {
   playerId: number;
   date: string; // YYYY-MM-DD format
+  isSkipped?: boolean; // true if date was intentionally skipped (no pick made)
 }
 
 /**
@@ -73,6 +74,7 @@ export function getLastPickedDate(playerId: number, fromDate: string): string | 
   // Find picks for this player within 30 days before fromDate (excluding fromDate itself)
   const recentPick = picks
     .filter(p => p.playerId === playerId)
+    .filter(p => !p.isSkipped) // Ignore skipped dates
     .filter(p => {
       const pickDate = new Date(p.date);
       const diffDays = Math.floor((from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -104,4 +106,67 @@ export function getDaysUntilEligible(playerId: number, forDate: string): number 
   const daysSincePick = Math.floor((from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24));
 
   return 30 - daysSincePick;
+}
+
+/**
+ * Convert Date object to YYYY-MM-DD string format
+ */
+export function toDateKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Mark a date as intentionally skipped (no pick made).
+ */
+export function skipDate(date: string): void {
+  savePick(-1, date);
+
+  // Update the pick to set isSkipped flag
+  const picks = getAllPicks();
+  const updated = picks.map(p =>
+    p.date === date ? { ...p, isSkipped: true } : p
+  );
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+}
+
+/**
+ * Check if a date was marked as skipped.
+ */
+export function isDateSkipped(date: string): boolean {
+  const pick = getPickForDate(date);
+  return pick?.isSkipped === true;
+}
+
+/**
+ * Detect dates in the last 30 days that had scheduled games but no pick/skip recorded.
+ * Returns array of forgotten dates sorted from oldest to newest.
+ */
+export function getForgottenDates(snapshot: any, currentDate: string): string[] {
+  if (typeof window === 'undefined') return [];
+
+  const current = new Date(currentDate);
+  const forgottenDates: string[] = [];
+  const picks = getAllPicks();
+
+  // Build a Set of dates with picks/skips for O(1) lookup
+  const pickedDates = new Set(picks.map(p => p.date));
+
+  // Check each of the last 30 days (1-30 days ago, NOT including current date)
+  for (let i = 1; i <= 30; i++) {
+    const checkDate = new Date(current);
+    checkDate.setDate(current.getDate() - i);
+    const dateStr = toDateKey(checkDate);
+
+    // Skip if pick/skip already exists
+    if (pickedDates.has(dateStr)) continue;
+
+    // Check if games were scheduled for this date
+    // Requires getGamesForDate from snapshot.ts - we'll import dynamically
+    const gamesForDate = snapshot.games.filter((g: any) => g.game_date === dateStr);
+    if (gamesForDate.length > 0) {
+      forgottenDates.push(dateStr);
+    }
+  }
+
+  return forgottenDates.sort(); // Oldest first
 }

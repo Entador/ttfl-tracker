@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import DateNavigation from "@/components/DateNavigation";
+import ForgottenPickAlert from "@/components/ForgottenPickAlert";
 import PlayerFilters, {
   FilterOption,
   SortOption,
@@ -15,7 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSnapshot, SnapshotData } from "@/lib/api";
-import { getAllPicks, getPickForDate, removePick, savePick } from "@/lib/picks";
+import {
+  getAllPicks,
+  getForgottenDates,
+  getPickForDate,
+  removePick,
+  savePick,
+  skipDate,
+} from "@/lib/picks";
 import { getGamesForDate, getPlayersForDate } from "@/lib/snapshot";
 
 function TableSkeleton() {
@@ -132,6 +140,10 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [currentPick, setCurrentPick] = useState<number | null>(null);
 
+  // Forgotten pick detection
+  const [forgottenDates, setForgottenDates] = useState<string[]>([]);
+  const [showForgottenAlert, setShowForgottenAlert] = useState(true);
+
   // Loading gif fade-out state
   const [showLoadingGif, setShowLoadingGif] = useState(true);
   const [fadingOut, setFadingOut] = useState(false);
@@ -160,6 +172,18 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     const pick = getPickForDate(currentDate);
     setCurrentPick(pick?.playerId ?? null);
   }, [currentDate, isHydrated]);
+
+  // Calculate forgotten dates when snapshot loads or picks change
+  useEffect(() => {
+    if (!snapshot || !isHydrated) return;
+    const forgotten = getForgottenDates(snapshot, currentDate);
+    setForgottenDates(forgotten);
+  }, [snapshot, currentDate, isHydrated, currentPick]);
+
+  // Reset alert visibility when date changes
+  useEffect(() => {
+    setShowForgottenAlert(true);
+  }, [currentDate]);
 
   // Pick handlers
   const handlePickPlayer = useCallback(
@@ -210,6 +234,27 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
       }
     }
   }, [currentDate, dateParam, router, initialDate]);
+
+  // Calculate stat ranges from all teams (once per snapshot, not per date)
+  const statRanges = useMemo(() => {
+    if (!snapshot) return { pace: { min: 0, max: 0, median: 0 }, defRating: { min: 0, max: 0, median: 0 } };
+
+    const paces = snapshot.teams.map(t => t.pace).filter(v => v !== null && !isNaN(v));
+    const defRatings = snapshot.teams.map(t => t.def_rating).filter(v => v !== null && !isNaN(v));
+
+    const getStats = (values: number[]) => {
+      if (values.length === 0) return { min: 0, max: 0, median: 0 };
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      return { min: sorted[0], max: sorted[sorted.length - 1], median };
+    };
+
+    return {
+      pace: getStats(paces),
+      defRating: getStats(defRatings),
+    };
+  }, [snapshot]);
 
   // Filter players for current date from snapshot
   const players = useMemo(() => {
@@ -399,8 +444,30 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
             )}
           </p>
         </div>
-        <DateNavigation currentDate={currentDate} />
+        <DateNavigation
+          currentDate={currentDate}
+          forgottenCount={forgottenDates.length}
+          hasForgottenToday={forgottenDates.includes(currentDate)}
+        />
       </div>
+
+      {/* Forgotten pick alert */}
+      {isHydrated &&
+        forgottenDates.includes(currentDate) &&
+        showForgottenAlert &&
+        !error && (
+          <ForgottenPickAlert
+            date={currentDate}
+            onPickNow={() => setShowForgottenAlert(false)}
+            onSkip={() => {
+              skipDate(currentDate);
+              setShowForgottenAlert(false);
+              const updated = getForgottenDates(snapshot!, currentDate);
+              setForgottenDates(updated);
+            }}
+            onDismiss={() => setShowForgottenAlert(false)}
+          />
+        )}
 
       {/* Error state */}
       {error && (
@@ -474,6 +541,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
                   currentPick={currentPick}
                   isHydrated={isHydrated}
                   loading={false}
+                  statRanges={statRanges}
                   onPickPlayer={handlePickPlayer}
                   onRemovePick={handleRemovePick}
                 />
