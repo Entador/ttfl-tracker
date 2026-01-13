@@ -1,6 +1,5 @@
 "use client";
 
-import { ScoreBadge } from "@/components/ScoreBadge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,22 +16,28 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getPickHistory, PickHistory } from "@/lib/api";
+import { getAllPlayers, PlayerBasic } from "@/lib/api";
+import { getAllPicks, Pick } from "@/lib/picks";
 import {
   AlertCircle,
   Calendar,
   Loader2,
-  Target,
-  TrendingUp,
-  Trophy,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import ImportPicks from "@/components/ImportPicks";
+
+interface PickWithPlayer extends Pick {
+  playerName: string;
+  team: string;
+}
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState<PickHistory[]>([]);
+  const [history, setHistory] = useState<PickWithPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -42,41 +47,46 @@ export default function HistoryPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await getPickHistory(50);
-      setHistory(data);
+
+      // Get picks from localStorage
+      const picks = getAllPicks();
+
+      if (picks.length === 0) {
+        setHistory([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch all players to get names
+      const players = await getAllPlayers();
+      const playerMap = new Map<number, PlayerBasic>();
+      players.forEach(p => playerMap.set(p.player_id, p));
+
+      // Match picks with player info
+      const picksWithPlayers: PickWithPlayer[] = picks
+        .map(pick => {
+          const player = playerMap.get(pick.playerId);
+          if (!player) return null;
+
+          // Ensure team is a string (defensive programming)
+          const team = typeof player.team === 'string' ? player.team : '';
+
+          return {
+            ...pick,
+            playerName: player.name,
+            team,
+          };
+        })
+        .filter((p): p is PickWithPlayer => p !== null)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      setHistory(picksWithPlayers);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load history");
     } finally {
       setLoading(false);
     }
   }
-
-  const stats = useMemo(() => {
-    if (history.length === 0) {
-      return {
-        totalPicks: 0,
-        totalScore: 0,
-        avgScore: 0,
-        bestScore: 0,
-        worstScore: 0,
-        above40: 0,
-        above50: 0,
-      };
-    }
-
-    const totalScore = history.reduce((sum, pick) => sum + pick.ttfl_score, 0);
-    const scores = history.map((p) => p.ttfl_score);
-
-    return {
-      totalPicks: history.length,
-      totalScore,
-      avgScore: totalScore / history.length,
-      bestScore: Math.max(...scores),
-      worstScore: Math.min(...scores),
-      above40: history.filter((p) => p.ttfl_score >= 40).length,
-      above50: history.filter((p) => p.ttfl_score >= 50).length,
-    };
-  }, [history]);
 
   if (loading) {
     return (
@@ -87,9 +97,6 @@ export default function HistoryPage() {
         </div>
         <p className="text-lg font-semibold mt-8 text-foreground">
           Loading pick history
-        </p>
-        <p className="text-sm text-muted-foreground mt-2 animate-pulse-subtle">
-          Analyzing your performance...
         </p>
       </div>
     );
@@ -135,94 +142,25 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Page header */}
-      <div className="animate-slide-up">
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3 bg-linear-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-          Pick History
-        </h1>
-        <p className="text-lg text-muted-foreground">
-          Track your performance across {stats.totalPicks} picks
-        </p>
-      </div>
-
-      {/* Stats overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2 text-xs font-semibold">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Target className="h-4 w-4 text-primary" />
-              </div>
-              Total Picks
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black bg-linear-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-              {stats.totalPicks}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 font-medium">
-              {stats.above40} above 40 pts
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2 text-xs font-semibold">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-              </div>
-              Average Score
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black bg-linear-to-br from-blue-600 to-blue-500 bg-clip-text text-transparent">
-              {stats.avgScore.toFixed(1)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 font-medium">
-              pts per game
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2 text-xs font-semibold">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <Trophy className="h-4 w-4 text-green-600" />
-              </div>
-              Best Pick
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black bg-linear-to-br from-green-600 to-green-500 bg-clip-text text-transparent">
-              {stats.bestScore}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 font-medium">
-              Worst: {stats.worstScore} pts
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-600 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2 text-xs font-semibold">
-              <div className="p-2 rounded-lg bg-purple-600/10">
-                <Calendar className="h-4 w-4 text-purple-600" />
-              </div>
-              Total Score
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-black bg-linear-to-br from-purple-600 to-purple-500 bg-clip-text text-transparent">
-              {stats.totalScore}
-            </div>
-            <p className="text-xs text-muted-foreground mt-2 font-medium">
-              {stats.above50} elite picks (50+)
-            </p>
-          </CardContent>
-        </Card>
+      <div className="animate-slide-up flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-3 bg-linear-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+            Pick History
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Your player picks ({history.length} total)
+          </p>
+        </div>
+        <Button
+          onClick={() => setShowImport(true)}
+          variant="outline"
+          className="shrink-0"
+        >
+          <Upload className="h-4 w-4 mr-2" />
+          Import History
+        </Button>
       </div>
 
       {/* History table */}
@@ -239,8 +177,7 @@ export default function HistoryPage() {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Player</TableHead>
-                <TableHead>Matchup</TableHead>
-                <TableHead className="text-right">TTFL Score</TableHead>
+                <TableHead>Team</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -255,21 +192,14 @@ export default function HistoryPage() {
                   </TableCell>
                   <TableCell>
                     <Link
-                      href={`/players/${pick.player_id}`}
+                      href={`/players/${pick.playerId}`}
                       className="font-medium hover:text-primary transition-colors"
                     >
-                      {pick.player_name}
+                      {pick.playerName}
                     </Link>
-                    <p className="text-xs text-muted-foreground">{pick.team}</p>
                   </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground">
-                      {pick.is_home ? "vs" : "@"}
-                    </span>{" "}
-                    {pick.opponent}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <ScoreBadge score={pick.ttfl_score} />
+                  <TableCell className="text-muted-foreground">
+                    {pick.team || "—"}
                   </TableCell>
                 </TableRow>
               ))}
@@ -278,54 +208,13 @@ export default function HistoryPage() {
         </CardContent>
       </Card>
 
-      {/* Performance insights */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Performance Summary</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-start gap-3">
-            <div className="bg-primary/10 rounded-full p-2">
-              <TrendingUp className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="font-medium">Overall Performance</p>
-              <p className="text-sm text-muted-foreground">
-                {stats.avgScore >= 40
-                  ? "Excellent picking strategy! Your average is well above the target."
-                  : stats.avgScore >= 30
-                  ? "Good performance with solid picks. Keep it up!"
-                  : "Room for improvement. Focus on higher-scoring opportunities."}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="bg-green-500/10 rounded-full p-2">
-              <Trophy className="h-4 w-4 text-green-600" />
-            </div>
-            <div>
-              <p className="font-medium">Success Rate</p>
-              <p className="text-sm text-muted-foreground">
-                {((stats.above40 / stats.totalPicks) * 100).toFixed(1)}% of your
-                picks scored 40+ points
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="bg-purple-500/10 rounded-full p-2">
-              <Target className="h-4 w-4 text-purple-600" />
-            </div>
-            <div>
-              <p className="font-medium">Elite Picks</p>
-              <p className="text-sm text-muted-foreground">
-                {stats.above50} elite performance
-                {stats.above50 !== 1 ? "s" : ""} (50+ points) out of{" "}
-                {stats.totalPicks} total picks
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Import modal */}
+      {showImport && (
+        <ImportPicks
+          onImportComplete={loadHistory}
+          onClose={() => setShowImport(false)}
+        />
+      )}
     </div>
   );
 }

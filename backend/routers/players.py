@@ -55,6 +55,36 @@ def _calculate_player_avg_ttfl_last_days(db: Session, player_id: int, days: int)
 # Moved to services/player_stats.py for reuse across endpoints
 
 
+@router.get("/players/all")
+def get_all_players(db: Session = Depends(get_db)):
+    """
+    Get all players (id, name, and team) for player lookup.
+    Useful for import functionality and search.
+    """
+    try:
+        # Get all active players from cache
+        players = app_cache.get_all_players()
+
+        result = []
+        for player in players:
+            team_abbr = ''
+            if player.team:
+                team_abbr = str(player.team.abbreviation)
+
+            result.append({
+                'player_id': player.nba_player_id,
+                'name': player.name,
+                'team': team_abbr,
+            })
+
+        return result
+    except Exception as e:
+        import traceback
+        print(f"Error in get_all_players: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error fetching all players: {str(e)}")
+
+
 @router.get("/players/tonight")
 def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(get_db)):
     """

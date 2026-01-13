@@ -171,3 +171,13 @@ export interface SnapshotData {
 export async function getSnapshot(): Promise<SnapshotData> {
   return fetchAPI<SnapshotData>('/api/snapshot');
 }
+
+export interface PlayerBasic {
+  player_id: number;
+  name: string;
+  team: string;
+}
+
+export async function getAllPlayers(): Promise<PlayerBasic[]> {
+  return await fetchAPI<PlayerBasic[]>('/api/players/all');
+}

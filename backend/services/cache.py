@@ -156,6 +156,21 @@ class AppCache:
             result.extend(self.get_players_by_team(team_id, active_only=True))
         return result
 
+    def get_all_players(self, active_only: bool = True) -> List:
+        """
+        Get all players.
+
+        Args:
+            active_only: Only return active players (default: True)
+
+        Returns:
+            List of Player objects
+        """
+        players = list(self.players_by_id.values())
+        if active_only:
+            return [p for p in players if p.is_active]
+        return players
+
     def clear(self):
         """Clear the cache"""
         self.games_by_date = {}
