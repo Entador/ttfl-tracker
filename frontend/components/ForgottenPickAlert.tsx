@@ -32,7 +32,7 @@ export default function ForgottenPickAlert({
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-sm mb-1">No pick recorded</h3>
             <p className="text-xs text-muted-foreground">
-              You haven't made a pick for {formattedDate}. Pick a player now, or mark as skipped if you forgot to pick in the actual game or if games didn't count.
+              You haven't made a pick for {formattedDate}. Pick a player below or skip this date.
             </p>
           </div>
         </div>

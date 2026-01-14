@@ -454,16 +454,16 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
       {/* Compact forgotten picks banner - only show when NOT on a forgotten date */}
       {isHydrated && forgottenDates.length > 0 && !forgottenDates.includes(currentDate) && !error && (
         <Link href="/history" className="block mb-2">
-          <div className="flex items-center justify-between px-4 py-2.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-500/50 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors cursor-pointer animate-[pulse-notification_2s_cubic-bezier(0.4,0,0.2,1)_1]">
-            <div className="flex items-center gap-3">
-              <div className="p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30">
+          <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-500/50 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors cursor-pointer animate-[pulse-notification_2s_cubic-bezier(0.4,0,0.2,1)_1]">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+              <div className="p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 shrink-0">
                 <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
+                <span className="text-sm font-semibold text-amber-900 dark:text-amber-100 truncate">
                   {forgottenDates.length} forgotten pick{forgottenDates.length !== 1 ? "s" : ""}
                 </span>
-                <span className="text-xs text-amber-700 dark:text-amber-300">
+                <span className="text-xs text-amber-700 dark:text-amber-300 truncate">
                   Click to view & skip
                 </span>
               </div>

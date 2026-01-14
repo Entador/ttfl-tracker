@@ -228,14 +228,16 @@ export default function HistoryPage() {
       {/* Forgotten dates section */}
       {forgottenDates.length > 0 && (
         <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/30">
+              <div className="p-1.5 sm:p-2 rounded-full bg-amber-100 dark:bg-amber-900/30">
                 <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
               </div>
               <div>
-                <CardTitle className="text-lg">Forgotten Picks</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-base sm:text-lg">
+                  Forgotten Picks
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   {forgottenDates.length} date
                   {forgottenDates.length !== 1 ? "s" : ""} in the past month
                   without a pick
@@ -243,16 +245,16 @@ export default function HistoryPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-1.5 sm:space-y-2">
               {forgottenDates.map((date) => (
                 <div
                   key={date}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg bg-background border"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-background border overflow-hidden"
                 >
-                  <div className="flex items-center gap-3">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="font-medium text-sm truncate">
                       {new Date(date).toLocaleDateString("en-US", {
                         weekday: "short",
                         month: "short",
@@ -261,20 +263,25 @@ export default function HistoryPage() {
                       })}
                     </span>
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" asChild>
+                  <div className="flex gap-1.5 sm:gap-2 w-full sm:w-auto shrink-0">
+                    <Button
+                      size="sm"
+                      asChild
+                      className="flex-1 sm:flex-none text-xs min-w-0"
+                    >
                       <Link href={`/?date=${date}`}>
-                        <UserCheck className="h-3 w-3 mr-1.5" />
-                        Pick Player
+                        <UserCheck className="h-2 w-2 shrink-0" />
+                        <span>Pick Player</span>
                       </Link>
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleSkipDate(date)}
+                      className="flex-1 sm:flex-none text-xs min-w-0"
                     >
-                      <X className="h-3 w-3 mr-1.5" />
-                      Mark as Skipped
+                      <X className="h-2 w-2 shrink-0" />
+                      <p className="">Mark as Skipped</p>
                     </Button>
                   </div>
                 </div>
