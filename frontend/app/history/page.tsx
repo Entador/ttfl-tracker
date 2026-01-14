@@ -1,5 +1,6 @@
 "use client";
 
+import ImportPicks from "@/components/ImportPicks";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,17 +17,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getAllPlayers, PlayerBasic } from "@/lib/api";
-import { getAllPicks, Pick } from "@/lib/picks";
+import { getAllPlayers, getSnapshot, getTodayET, PlayerBasic } from "@/lib/api";
+import { getAllPicks, getForgottenDates, Pick, skipDate } from "@/lib/picks";
 import {
   AlertCircle,
+  AlertTriangle,
   Calendar,
   Loader2,
   Upload,
+  UserCheck,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import ImportPicks from "@/components/ImportPicks";
 
 interface PickWithPlayer extends Pick {
   playerName: string;
@@ -38,9 +41,11 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [forgottenDates, setForgottenDates] = useState<string[]>([]);
 
   useEffect(() => {
     loadHistory();
+    loadForgottenDates();
   }, []);
 
   async function loadHistory() {
@@ -60,16 +65,16 @@ export default function HistoryPage() {
       // Fetch all players to get names
       const players = await getAllPlayers();
       const playerMap = new Map<number, PlayerBasic>();
-      players.forEach(p => playerMap.set(p.player_id, p));
+      players.forEach((p) => playerMap.set(p.player_id, p));
 
       // Match picks with player info
       const picksWithPlayers: PickWithPlayer[] = picks
-        .map(pick => {
+        .map((pick) => {
           const player = playerMap.get(pick.playerId);
           if (!player) return null;
 
           // Ensure team is a string (defensive programming)
-          const team = typeof player.team === 'string' ? player.team : '';
+          const team = typeof player.team === "string" ? player.team : "";
 
           return {
             ...pick,
@@ -78,7 +83,9 @@ export default function HistoryPage() {
           };
         })
         .filter((p): p is PickWithPlayer => p !== null)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
 
       setHistory(picksWithPlayers);
     } catch (err) {
@@ -86,6 +93,22 @@ export default function HistoryPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadForgottenDates() {
+    try {
+      const snapshot = await getSnapshot();
+      const todayET = getTodayET();
+      const forgotten = getForgottenDates(snapshot, todayET);
+      setForgottenDates(forgotten);
+    } catch (err) {
+      console.error("Failed to load forgotten dates:", err);
+    }
+  }
+
+  function handleSkipDate(date: string) {
+    skipDate(date);
+    loadForgottenDates(); // Refresh the list
   }
 
   if (loading) {
@@ -123,21 +146,60 @@ export default function HistoryPage() {
 
   if (history.length === 0) {
     return (
-      <Card className="animate-slide-up">
-        <CardContent className="flex flex-col items-center py-16">
-          <div className="p-4 rounded-full bg-primary/10 mb-6">
-            <Calendar className="h-16 w-16 text-primary" />
-          </div>
-          <h3 className="text-2xl font-bold mb-2">No picks yet</h3>
-          <p className="text-muted-foreground mb-6 text-center max-w-md">
-            Start by picking a player from tonight&apos;s games and build your
-            history
-          </p>
-          <Button asChild size="lg" className="shadow-md">
-            <Link href="/">View Tonight&apos;s Players</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <>
+        <div className="flex min-h-[70vh] items-center justify-center px-4">
+          <Card className="w-full max-w-lg animate-slide-up">
+            <CardContent className="flex flex-col items-center py-16 text-center">
+              <div className="mb-6 rounded-full bg-primary/10 p-5">
+                <Calendar className="h-14 w-14 text-primary" />
+              </div>
+
+              <h3 className="mb-2 text-2xl font-semibold">No picks yet</h3>
+
+              <p className="mb-8 max-w-md text-muted-foreground">
+                Start by picking a player from tonight&apos;s games or import
+                your existing history to see past picks.
+              </p>
+
+              <div className="flex w-full flex-col gap-4 sm:flex-row sm:justify-center">
+                <Button asChild size="lg" className="sm:min-w-55 shadow-md">
+                  <Link href="/">View Tonight&apos;s Players</Link>
+                </Button>
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="sm:min-w-55"
+                  onClick={() => setShowImport(true)}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import History
+                </Button>
+              </div>
+
+              <div className="mt-10 flex w-full items-center gap-4">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Tip
+                </span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <p className="mt-4 text-sm text-muted-foreground">
+                You can always import past picks later from your settings.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Import modal */}
+        {showImport && (
+          <ImportPicks
+            onImportComplete={loadHistory}
+            onClose={() => setShowImport(false)}
+          />
+        )}
+      </>
     );
   }
 
@@ -162,6 +224,65 @@ export default function HistoryPage() {
           Import History
         </Button>
       </div>
+
+      {/* Forgotten dates section */}
+      {forgottenDates.length > 0 && (
+        <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Forgotten Picks</CardTitle>
+                <CardDescription>
+                  {forgottenDates.length} date
+                  {forgottenDates.length !== 1 ? "s" : ""} in the past month
+                  without a pick
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {forgottenDates.map((date) => (
+                <div
+                  key={date}
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg bg-background border"
+                >
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">
+                      {new Date(date).toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" asChild>
+                      <Link href={`/?date=${date}`}>
+                        <UserCheck className="h-3 w-3 mr-1.5" />
+                        Pick Player
+                      </Link>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSkipDate(date)}
+                    >
+                      <X className="h-3 w-3 mr-1.5" />
+                      Mark as Skipped
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* History table */}
       <Card>

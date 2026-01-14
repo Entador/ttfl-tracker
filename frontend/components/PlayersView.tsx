@@ -15,7 +15,9 @@ import PlayersTable from "@/components/PlayersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getSnapshot, SnapshotData } from "@/lib/api";
+import { getSnapshot, getTodayET, SnapshotData } from "@/lib/api";
+import { AlertTriangle, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import {
   getAllPicks,
   getForgottenDates,
@@ -174,11 +176,13 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
   }, [currentDate, isHydrated]);
 
   // Calculate forgotten dates when snapshot loads or picks change
+  // Always calculate from today (not currentDate) to keep count static
   useEffect(() => {
     if (!snapshot || !isHydrated) return;
-    const forgotten = getForgottenDates(snapshot, currentDate);
+    const todayET = getTodayET();
+    const forgotten = getForgottenDates(snapshot, todayET);
     setForgottenDates(forgotten);
-  }, [snapshot, currentDate, isHydrated, currentPick]);
+  }, [snapshot, isHydrated, currentPick]);
 
   // Reset alert visibility when date changes
   useEffect(() => {
@@ -444,12 +448,30 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
             )}
           </p>
         </div>
-        <DateNavigation
-          currentDate={currentDate}
-          forgottenCount={forgottenDates.length}
-          hasForgottenToday={forgottenDates.includes(currentDate)}
-        />
+        <DateNavigation currentDate={currentDate} />
       </div>
+
+      {/* Compact forgotten picks banner - only show when NOT on a forgotten date */}
+      {isHydrated && forgottenDates.length > 0 && !forgottenDates.includes(currentDate) && !error && (
+        <Link href="/history" className="block mb-2">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-500/50 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors cursor-pointer animate-[pulse-notification_2s_cubic-bezier(0.4,0,0.2,1)_1]">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                <span className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                  {forgottenDates.length} forgotten pick{forgottenDates.length !== 1 ? "s" : ""}
+                </span>
+                <span className="text-xs text-amber-700 dark:text-amber-300">
+                  Click to view & skip
+                </span>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" />
+          </div>
+        </Link>
+      )}
 
       {/* Forgotten pick alert */}
       {isHydrated &&
@@ -462,10 +484,10 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
             onSkip={() => {
               skipDate(currentDate);
               setShowForgottenAlert(false);
-              const updated = getForgottenDates(snapshot!, currentDate);
+              const todayET = getTodayET();
+              const updated = getForgottenDates(snapshot!, todayET);
               setForgottenDates(updated);
             }}
-            onDismiss={() => setShowForgottenAlert(false)}
           />
         )}
 

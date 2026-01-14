@@ -65,6 +65,9 @@ export default function PlayerFilters({
             <button
               className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2 text-xs font-medium rounded-full border border-input hover:bg-accent transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed leading-none"
               disabled={gamesCount === null}
+              onClick={(e) => {
+                if ('ontouchstart' in window) e.currentTarget.blur();
+              }}
             >
               <Trophy className="h-3 w-3" />
               <span className="text-[11px] sm:text-xs leading-none">
@@ -85,7 +88,8 @@ export default function PlayerFilters({
               <div className="space-y-0">
                 {/* All games option */}
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    if ('ontouchstart' in window) e.currentTarget.blur();
                     onGameChange?.(null);
                     setOpen(false);
                   }}
@@ -104,7 +108,8 @@ export default function PlayerFilters({
                   return (
                     <button
                       key={game.key}
-                      onClick={() => {
+                      onClick={(e) => {
+                        if ('ontouchstart' in window) e.currentTarget.blur();
                         onGameChange?.(game.key);
                         setOpen(false);
                       }}

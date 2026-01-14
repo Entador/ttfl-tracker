@@ -1,6 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getTodayET } from "@/lib/api";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -8,8 +7,6 @@ import { useRouter } from "next/navigation";
 
 interface DateNavigationProps {
   currentDate: string; // YYYY-MM-DD (in Eastern Time)
-  forgottenCount?: number; // Number of forgotten dates
-  hasForgottenToday?: boolean; // Is current date forgotten
 }
 
 // Parse YYYY-MM-DD string to Date object (treating as local date)
@@ -26,8 +23,6 @@ const toDateKey = (date: Date) =>
 
 export default function DateNavigation({
   currentDate,
-  forgottenCount = 0,
-  hasForgottenToday = false,
 }: DateNavigationProps) {
   const router = useRouter();
 
@@ -119,21 +114,6 @@ export default function DateNavigation({
               </span>
             )}
           </div>
-
-          {/* Badge for forgotten dates count */}
-          {forgottenCount > 0 && !hasForgottenToday && (
-            <Badge
-              variant="secondary"
-              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px] bg-amber-500 text-white border-0 hover:bg-amber-500"
-            >
-              {forgottenCount}
-            </Badge>
-          )}
-
-          {/* Dot indicator for current forgotten date */}
-          {hasForgottenToday && (
-            <div className="absolute -top-1.5 -right-1.5 h-3 w-3 rounded-full bg-amber-500 border-2 border-background" />
-          )}
         </div>
       </div>
 

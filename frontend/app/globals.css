@@ -72,6 +72,23 @@ a, button, [role="button"] {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Mobile tap highlight fixes */
+button, [role="button"], a {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Remove focus ring on touch devices after tap */
+@media (hover: none) and (pointer: coarse) {
+  button:focus:not(:focus-visible),
+  [role="button"]:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+  }
+}
+
 /* Custom animations */
 @keyframes slide-up {
   from {
@@ -101,6 +118,29 @@ a, button, [role="button"] {
   }
   50% {
     opacity: 0.8;
+  }
+}
+
+@keyframes pulse-notification {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.6);
+  }
+  25% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0);
+  }
+  50% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+  75% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
   }
 }
 

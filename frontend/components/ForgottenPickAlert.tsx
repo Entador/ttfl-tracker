@@ -1,22 +1,20 @@
 "use client";
 
-import { AlertTriangle, UserCheck, X } from "lucide-react";
+import { AlertTriangle, UserCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface ForgottenPickAlertProps {
   date: string;
-  onPickNow: () => void; // Dismiss alert and scroll to player list
+  onPickNow: () => void; // Dismiss alert
   onSkip: () => void; // Mark as skipped
-  onDismiss: () => void; // Close alert (temporary)
 }
 
 export default function ForgottenPickAlert({
   date,
   onPickNow,
   onSkip,
-  onDismiss,
 }: ForgottenPickAlertProps) {
   const formattedDate = new Date(date).toLocaleDateString("en-US", {
     weekday: "long",
@@ -34,8 +32,7 @@ export default function ForgottenPickAlert({
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-sm mb-1">No pick recorded</h3>
             <p className="text-xs text-muted-foreground">
-              You haven't made a pick for {formattedDate}. Would you like to
-              pick a player now or skip this date?
+              You haven't made a pick for {formattedDate}. Pick a player now, or mark as skipped if you forgot to pick in the actual game or if games didn't count.
             </p>
           </div>
         </div>
@@ -55,16 +52,7 @@ export default function ForgottenPickAlert({
             onClick={onSkip}
             className="flex-1 sm:flex-none"
           >
-            Skip
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onDismiss}
-            className="px-2"
-            aria-label="Dismiss alert"
-          >
-            <X className="h-4 w-4" />
+            Mark as Skipped
           </Button>
         </div>
       </CardContent>

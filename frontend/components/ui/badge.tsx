@@ -33,9 +33,21 @@ export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, variant, onClick, ...props }: BadgeProps) {
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Remove focus after click on touch devices to prevent persistent highlight
+    if ('ontouchstart' in window) {
+      e.currentTarget.blur();
+    }
+    onClick?.(e);
+  };
+
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <div
+      className={cn(badgeVariants({ variant }), className)}
+      onClick={handleClick}
+      {...props}
+    />
   );
 }
 
