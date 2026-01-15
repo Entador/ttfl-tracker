@@ -1,8 +1,15 @@
 import { Clock } from "lucide-react";
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import Link from "next/link";
 import { PiBasketball, PiCourtBasketball } from "react-icons/pi";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "TTFL Tracker",
@@ -17,7 +24,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-background">
+      <body className={`${inter.className} min-h-screen bg-background antialiased`}>
         <nav className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-md shadow-sm">
           <div className="container mx-auto px-3 sm:px-6 lg:px-8">
             <div className="flex h-16 items-center justify-between">
