@@ -69,6 +69,18 @@ from services.ttfl import calculate_ttfl_score
 from services.injuries import update_player_injuries
 
 
+def parse_utc_datetime(dt_string: str) -> datetime | None:
+    """Parse NBA API UTC datetime string to timezone-aware datetime."""
+    if not dt_string:
+        return None
+    try:
+        # Format: "2025-01-15T00:30:00Z" or "2025-01-15T00:30:00"
+        dt_string = dt_string.replace("Z", "+00:00")
+        return datetime.fromisoformat(dt_string)
+    except (ValueError, TypeError):
+        return None
+
+
 def get_db() -> Session:
     """Get database session."""
     if SessionLocal is None:
@@ -140,6 +152,7 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
             "status": status,
             "home_score": home_score,
             "away_score": away_score,
+            "start_time_utc": parse_utc_datetime(row.get("gameDateTimeUTC")),
         }
 
     print(f"Loaded {len(schedule_data)} games from NBA schedule")
@@ -169,6 +182,13 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
             if not dry_run:
                 game.home_score = new_home_score
                 game.away_score = new_away_score
+            needs_update = True
+
+        # Update start time for scheduled games (times can change before tipoff)
+        new_start_time = schedule_info.get("start_time_utc")
+        if new_status == "scheduled" and new_start_time and game.start_time_utc != new_start_time:
+            if not dry_run:
+                game.start_time_utc = new_start_time
             needs_update = True
 
         if needs_update:

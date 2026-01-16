@@ -58,6 +58,7 @@ class Game(Base):
     status = Column(String, default="scheduled")  # scheduled | live | final
     home_score = Column(Integer, nullable=True)
     away_score = Column(Integer, nullable=True)
+    start_time_utc = Column(DateTime(timezone=True), nullable=True)
 
     home_team = relationship("Team", foreign_keys=[home_team_id])
     away_team = relationship("Team", foreign_keys=[away_team_id])

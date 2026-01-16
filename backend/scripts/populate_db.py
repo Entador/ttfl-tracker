@@ -36,6 +36,18 @@ from models import Team, Player, Game
 from services.nba_api import get_current_season
 
 
+def parse_utc_datetime(dt_string: str) -> datetime | None:
+    """Parse NBA API UTC datetime string to timezone-aware datetime."""
+    if not dt_string:
+        return None
+    try:
+        # Format: "2025-01-15T00:30:00Z" or "2025-01-15T00:30:00"
+        dt_string = dt_string.replace("Z", "+00:00")
+        return datetime.fromisoformat(dt_string)
+    except (ValueError, TypeError):
+        return None
+
+
 def get_db() -> Session:
     """Get database session."""
     if SessionLocal is None:
@@ -244,6 +256,9 @@ def populate_games(
                 skipped_count += 1
             continue
 
+        # Parse start time
+        start_time_utc = parse_utc_datetime(row.get("gameDateTimeUTC"))
+
         # Create new game record
         game = Game(
             nba_game_id=game_id,
@@ -253,6 +268,7 @@ def populate_games(
             status=status,
             home_score=home_score,
             away_score=away_score,
+            start_time_utc=start_time_utc,
         )
         db.add(game)
         new_count += 1

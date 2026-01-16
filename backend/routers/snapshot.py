@@ -97,6 +97,15 @@ def get_snapshot(db: Session = Depends(get_db)):
                 'def_rating': team.def_rating or 0.0,
             })
 
+        # Compute earliest game time per date
+        earliest_game_times = {}
+        for game in all_games:
+            if game.start_time_utc:
+                date_str = game.game_date.isoformat()
+                time_iso = game.start_time_utc.isoformat()
+                if date_str not in earliest_game_times or time_iso < earliest_game_times[date_str]:
+                    earliest_game_times[date_str] = time_iso
+
         return {
             'metadata': {
                 'generated_at': datetime.utcnow().isoformat() + 'Z',
@@ -104,6 +113,7 @@ def get_snapshot(db: Session = Depends(get_db)):
                 'total_games': len(games_data),
                 'total_teams': len(teams_data),
                 'injury_updated_at': injury_updated_at,
+                'earliest_game_times': earliest_game_times,
             },
             'players': players_data,
             'games': games_data,

@@ -130,6 +130,7 @@ export interface SnapshotMetadata {
   total_games: number;
   total_teams: number;
   injury_updated_at: string | null;
+  earliest_game_times: Record<string, string>; // date (YYYY-MM-DD) -> ISO timestamp
 }
 
 export interface PlayerSnapshot {

@@ -407,6 +407,32 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
       })()
     : null;
 
+  // Get deadline (earliest game time) for current date in Paris time
+  // If game starts after midnight Paris time, show "00:00" as the deadline
+  const deadline = useMemo(() => {
+    if (!snapshot?.metadata.earliest_game_times) return null;
+    const timeUtc = snapshot.metadata.earliest_game_times[currentDate];
+    if (!timeUtc) return null;
+
+    const gameDate = new Date(timeUtc);
+
+    // Get the game's date in Paris timezone
+    const parisDateStr = gameDate.toLocaleDateString("en-CA", {
+      timeZone: "Europe/Paris",
+    });
+
+    // If game is after midnight Paris time (different date than currentDate), show 00:00
+    if (parisDateStr !== currentDate) {
+      return "00:00";
+    }
+
+    return gameDate.toLocaleTimeString("fr-FR", {
+      timeZone: "Europe/Paris",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [snapshot, currentDate]);
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -448,7 +474,14 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
             )}
           </p>
         </div>
-        <DateNavigation currentDate={currentDate} />
+        <div className="flex flex-col items-start sm:items-end gap-1">
+          <DateNavigation currentDate={currentDate} />
+          {!loading && deadline && players.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Deadline: <span className="font-semibold text-foreground">{deadline}</span>
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Compact forgotten picks banner - only show when NOT on a forgotten date */}
