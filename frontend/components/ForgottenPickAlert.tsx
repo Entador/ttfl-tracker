@@ -32,17 +32,14 @@ export default function ForgottenPickAlert({
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-sm mb-1">No pick recorded</h3>
             <p className="text-xs text-muted-foreground">
-              You haven't made a pick for {formattedDate}. Pick a player below or skip this date.
+              You haven&apos;t made a pick for {formattedDate}. Pick a player
+              below or skip this date.
             </p>
           </div>
         </div>
 
         <div className="flex gap-2 w-full sm:w-auto">
-          <Button
-            size="sm"
-            onClick={onPickNow}
-            className="flex-1 sm:flex-none"
-          >
+          <Button size="sm" onClick={onPickNow} className="flex-1 sm:flex-none">
             <UserCheck className="h-4 w-4 mr-1.5" />
             Pick Now
           </Button>

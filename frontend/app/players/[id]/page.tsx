@@ -1,8 +1,8 @@
 "use client";
 
 import { ScoreBadge } from "@/components/ScoreBadge";
+import { ScoreChart } from "@/components/ScoreChart";
 import { TeamLogo } from "@/components/TeamLogo";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -138,49 +138,54 @@ export default function PlayerDetailPage() {
             Back to Tonight&apos;s Players
           </Link>
         </Button>
-        <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-1 bg-linear-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight bg-linear-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
             {data.player.name}
           </h1>
-          <p className="text-base text-muted-foreground">{data.player.team}</p>
+          <span className="sm:hidden">
+            <TeamLogo team={data.player.team} size={35} />
+          </span>
+          <span className="hidden sm:block">
+            <TeamLogo team={data.player.team} size={60} />
+          </span>
         </div>
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <Card className="border-l-4 border-l-primary hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2 pt-4">
-            <CardDescription className="flex items-center gap-2 text-xs font-semibold">
-              <div className="p-1.5 rounded-lg bg-primary/10">
-                <TrendingUp className="h-3.5 w-3.5 text-primary" />
+          <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-4 px-3 sm:px-6">
+            <CardDescription className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold">
+              <div className="p-1 sm:p-1.5 rounded-lg bg-primary/10">
+                <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary" />
               </div>
               Average TTFL
             </CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div className="text-3xl font-black bg-linear-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+          <CardContent className="pb-3 sm:pb-4 px-3 sm:px-6">
+            <div className="text-2xl sm:text-3xl font-black bg-linear-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
               {data.avg_ttfl.toFixed(1)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1 font-medium">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium">
               Last {data.recent_games.length} games
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2 pt-4">
-            <CardDescription className="flex items-center gap-2 text-xs font-semibold">
-              <div className="p-1.5 rounded-lg bg-green-500/10">
-                <Target className="h-3.5 w-3.5 text-green-600" />
+          <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-4 px-3 sm:px-6">
+            <CardDescription className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold">
+              <div className="p-1 sm:p-1.5 rounded-lg bg-green-500/10">
+                <Target className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-green-600" />
               </div>
               Times Picked
             </CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div className="text-3xl font-black bg-linear-to-br from-green-600 to-green-500 bg-clip-text text-transparent">
+          <CardContent className="pb-3 sm:pb-4 px-3 sm:px-6">
+            <div className="text-2xl sm:text-3xl font-black bg-linear-to-br from-green-600 to-green-500 bg-clip-text text-transparent">
               {pickedGames.length}
             </div>
-            <p className="text-xs text-muted-foreground mt-1 font-medium">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium">
               {pickedGames.length > 0
                 ? `Avg: ${avgPicked} pts`
                 : "Not picked yet"}
@@ -189,153 +194,159 @@ export default function PlayerDetailPage() {
         </Card>
 
         <Card className="border-l-4 border-l-amber-500 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2 pt-4">
-            <CardDescription className="flex items-center gap-2 text-xs font-semibold">
-              <div className="p-1.5 rounded-lg bg-amber-500/10">
-                <Trophy className="h-3.5 w-3.5 text-amber-600" />
+          <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-4 px-3 sm:px-6">
+            <CardDescription className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold">
+              <div className="p-1 sm:p-1.5 rounded-lg bg-amber-500/10">
+                <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-600" />
               </div>
               Best Performance
             </CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div className={`text-3xl font-black`}>{bestScore}</div>
-            <p className="text-xs text-muted-foreground mt-1 font-medium">
+          <CardContent className="pb-3 sm:pb-4 px-3 sm:px-6">
+            <div className="text-2xl sm:text-3xl font-black">{bestScore}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium">
               Worst: {worstScore} pts
             </p>
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all duration-300">
-          <CardHeader className="pb-2 pt-4">
-            <CardDescription className="flex items-center gap-2 text-xs font-semibold">
-              <div className="p-1.5 rounded-lg bg-blue-500/10">
-                <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
+          <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-4 px-3 sm:px-6">
+            <CardDescription className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold">
+              <div className="p-1 sm:p-1.5 rounded-lg bg-blue-500/10">
+                <CheckCircle2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-600" />
               </div>
               Consistency
             </CardDescription>
           </CardHeader>
-          <CardContent className="pb-4">
-            <div className="text-3xl font-black bg-linear-to-br from-blue-600 to-blue-500 bg-clip-text text-transparent">
+          <CardContent className="pb-3 sm:pb-4 px-3 sm:px-6">
+            <div className="text-2xl sm:text-3xl font-black bg-linear-to-br from-blue-600 to-blue-500 bg-clip-text text-transparent">
               {consistency}
             </div>
-            <p className="text-xs text-muted-foreground mt-1 font-medium">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium">
               Std Dev: {stdDev.toFixed(1)}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Games */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Recent Games</CardTitle>
-          <CardDescription className="text-sm">
-            Performance history across {data.recent_games.length} recent games
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pb-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="h-8 py-1">Date</TableHead>
-                <TableHead className="h-8 py-1">Matchup</TableHead>
-                <TableHead className="text-right h-8 py-1">
-                  TTFL Score
-                </TableHead>
-                <TableHead className="text-center h-8 py-1">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.recent_games.map((game, index) => (
-                <TableRow
-                  key={index}
-                  className={game.picked ? "bg-muted/50" : ""}
-                >
-                  <TableCell className="font-medium py-1.5">
-                    {new Date(game.game_date).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                  <TableCell className="py-1.5">
-                    <span className="flex items-center text-muted-foreground gap-1">
-                      {game.is_home ? "vs" : "@"}
-                      <TeamLogo team={game.opponent} size={LOGO_SIZE} />
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right py-1.5">
-                    <ScoreBadge score={game.ttfl_score} />
-                  </TableCell>
-
-                  <TableCell className="text-center py-1.5">
-                    {game.picked && (
-                      <Badge variant="default" className="gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Picked
-                      </Badge>
-                    )}
-                  </TableCell>
+      {/* Recent Games - Table + Chart + Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
+        {/* Left: Recent Games Table */}
+        <Card className="lg:max-h-[600px] flex flex-col">
+          <CardHeader className="pb-3 shrink-0">
+            <CardTitle className="text-lg">Recent Games</CardTitle>
+            <CardDescription className="text-sm">
+              Last {data.recent_games.length} games
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pb-4 overflow-y-scroll">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="h-8 py-1">Date</TableHead>
+                  <TableHead className="h-8 py-1">Matchup</TableHead>
+                  <TableHead className="text-right h-8 py-1">
+                    TTFL Score
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {data.recent_games.map((game, index) => (
+                  <TableRow
+                    key={index}
+                    className={game.picked ? "bg-muted/50" : ""}
+                  >
+                    <TableCell className="font-medium py-1.5 whitespace-nowrap">
+                      {new Date(game.game_date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="py-1.5">
+                      <span className="flex items-center text-muted-foreground gap-1">
+                        {game.is_home ? "vs" : "@"}
+                        <TeamLogo team={game.opponent} size={LOGO_SIZE} />
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right py-1.5">
+                      <ScoreBadge score={game.ttfl_score} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-      {/* Performance Insights */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Performance Insights</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2.5 pb-4">
-          <div className="flex items-start gap-2.5">
-            <div className="bg-primary/10 rounded-full p-1.5">
-              <TrendingUp className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <div>
-              <p className="font-medium text-sm">Average Performance</p>
-              <p className="text-sm text-muted-foreground">
-                {data.avg_ttfl >= 45
-                  ? "Elite player with consistently high scores"
-                  : data.avg_ttfl >= 35
-                  ? "Solid performer with good scoring potential"
-                  : "Developing player with room for improvement"}
-              </p>
-            </div>
-          </div>
-          {pickedGames.length > 0 && (
-            <div className="flex items-start gap-2.5">
-              <div className="bg-green-500/10 rounded-full p-1.5">
-                <Target className="h-3.5 w-3.5 text-green-600" />
+        {/* Right: Chart + Performance Insights stacked */}
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Score Trend</CardTitle>
+              <CardDescription className="text-sm">
+                Average: {data.avg_ttfl.toFixed(1)} pts
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-4">
+              <ScoreChart games={data.recent_games} avgScore={data.avg_ttfl} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Performance Insights</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2.5 pb-4">
+              <div className="flex items-start gap-2.5">
+                <div className="bg-primary/10 rounded-full p-1.5">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Average Performance</p>
+                  <p className="text-sm text-muted-foreground">
+                    {data.avg_ttfl >= 45
+                      ? "Elite player with consistently high scores"
+                      : data.avg_ttfl >= 35
+                      ? "Solid performer with good scoring potential"
+                      : "Developing player with room for improvement"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-medium text-sm">Pick History</p>
-                <p className="text-sm text-muted-foreground">
-                  Picked {pickedGames.length} time
-                  {pickedGames.length !== 1 ? "s" : ""} with an average of{" "}
-                  {avgPicked} points
-                </p>
+              {pickedGames.length > 0 && (
+                <div className="flex items-start gap-2.5">
+                  <div className="bg-green-500/10 rounded-full p-1.5">
+                    <Target className="h-3.5 w-3.5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Pick History</p>
+                    <p className="text-sm text-muted-foreground">
+                      Picked {pickedGames.length} time
+                      {pickedGames.length !== 1 ? "s" : ""} with an average of{" "}
+                      {avgPicked} points
+                    </p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-start gap-2.5">
+                <div className="bg-purple-500/10 rounded-full p-1.5">
+                  <Trophy className="h-3.5 w-3.5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Consistency Rating</p>
+                  <p className="text-sm text-muted-foreground">
+                    {consistency === "High"
+                      ? "Very reliable with minimal variance in performance"
+                      : consistency === "Medium"
+                      ? "Moderate consistency with occasional fluctuations"
+                      : "High variance - performance can be unpredictable"}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-          <div className="flex items-start gap-2.5">
-            <div className="bg-purple-500/10 rounded-full p-1.5">
-              <Trophy className="h-3.5 w-3.5 text-purple-600" />
-            </div>
-            <div>
-              <p className="font-medium text-sm">Consistency Rating</p>
-              <p className="text-sm text-muted-foreground">
-                {consistency === "High"
-                  ? "Very reliable with minimal variance in performance"
-                  : consistency === "Medium"
-                  ? "Moderate consistency with occasional fluctuations"
-                  : "High variance - performance can be unpredictable"}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

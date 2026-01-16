@@ -227,8 +227,8 @@ export default function HistoryPage() {
 
       {/* Forgotten dates section */}
       {forgottenDates.length > 0 && (
-        <Card className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-          <CardHeader className="p-4 sm:p-6">
+        <Card className="gap-2 flex-col border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+          <CardHeader className="py-4 px-4 sm:p-6">
             <div className="flex items-center gap-2">
               <div className="p-1.5 sm:p-2 rounded-full bg-amber-100 dark:bg-amber-900/30">
                 <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
@@ -245,7 +245,7 @@ export default function HistoryPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="px-4 pt-0 pb-4 sm:p-6">
             <div className="space-y-1.5 sm:space-y-2">
               {forgottenDates.map((date) => (
                 <div
@@ -305,17 +305,16 @@ export default function HistoryPage() {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Player</TableHead>
-                <TableHead>Team</TableHead>
+                <TableHead className="hidden sm:table-cell">Team</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {history.map((pick, index) => (
                 <TableRow key={index}>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium whitespace-nowrap">
                     {new Date(pick.date).toLocaleDateString("en-US", {
                       month: "short",
                       day: "numeric",
-                      year: "numeric",
                     })}
                   </TableCell>
                   <TableCell>
@@ -326,7 +325,7 @@ export default function HistoryPage() {
                       {pick.playerName}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden sm:table-cell text-muted-foreground">
                     {pick.team || "—"}
                   </TableCell>
                 </TableRow>
