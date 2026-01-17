@@ -1,11 +1,17 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 import { PlayerInfo } from "@/components/PlayerInfo";
 import { TeamLogo } from "@/components/TeamLogo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Player } from "@/lib/api";
 
 const LOGO_SIZE = 32;
@@ -36,36 +42,67 @@ function InjuryBadge({
   returnDate: string | null;
   details: string | null;
 }) {
+  const [open, setOpen] = useState(false);
+
   if (!status) return null;
 
   const isOut = status.toLowerCase() === "out";
   const label = isOut ? "OUT" : "GTD";
   const variant = isOut ? "destructive" : "warning";
+  const hasDetails = returnDate || details;
 
-  return (
-    <div className="relative group">
+  if (!hasDetails) {
+    return (
       <Badge variant={variant} className="px-1.5 py-0.5 text-[11px] leading-4">
         {label}
       </Badge>
-      {(returnDate || details) && (
-        <div className="absolute left-0 top-full mt-2 z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none">
-          <div className="bg-popover text-popover-foreground border rounded-lg shadow-xl px-3 py-2.5 text-sm w-70 max-w-[90vw]">
-            {returnDate && (
-              <div className="mb-2 last:mb-0">
-                <p className="font-semibold leading-relaxed">
-                  Expected return: {returnDate}
-                </p>
-              </div>
-            )}
-            {details && (
-              <div className="text-xs text-muted-foreground leading-relaxed wrap-break-word">
-                {formatInjuryDetails(details)}
-              </div>
-            )}
+    );
+  }
+
+  const isTouch = typeof window !== "undefined" && "ontouchstart" in window;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className="focus:outline-none"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isTouch) e.currentTarget.blur();
+          }}
+          onMouseEnter={() => !isTouch && setOpen(true)}
+          onMouseLeave={() => !isTouch && setOpen(false)}
+        >
+          <Badge
+            variant={variant}
+            className="px-1.5 py-0.5 text-[11px] leading-4 cursor-pointer"
+          >
+            {label}
+          </Badge>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-70 max-w-[90vw] px-3 py-2.5 cursor-pointer"
+        sideOffset={4}
+        onClick={() => setOpen(false)}
+        onMouseEnter={() => !isTouch && setOpen(true)}
+        onMouseLeave={() => !isTouch && setOpen(false)}
+      >
+        {returnDate && (
+          <div className="mb-2 last:mb-0">
+            <p className="font-semibold text-sm leading-relaxed">
+              Expected return: {returnDate}
+            </p>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+        {details && (
+          <div className="text-xs text-muted-foreground leading-relaxed wrap-break-word">
+            {formatInjuryDetails(details)}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 

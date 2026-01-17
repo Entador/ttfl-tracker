@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Calendar } from "lucide-react";
+import { AlarmClock, AlertCircle, Calendar } from "lucide-react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -16,8 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSnapshot, getTodayET, SnapshotData } from "@/lib/api";
-import { AlertTriangle, ArrowRight } from "lucide-react";
-import Link from "next/link";
 import {
   getAllPicks,
   getForgottenDates,
@@ -27,6 +25,8 @@ import {
   skipDate,
 } from "@/lib/picks";
 import { getGamesForDate, getPlayersForDate } from "@/lib/snapshot";
+import { AlertTriangle, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 function TableSkeleton() {
   return (
@@ -195,7 +195,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
       savePick(playerId, currentDate);
       setCurrentPick(playerId);
     },
-    [currentDate]
+    [currentDate],
   );
 
   const handleRemovePick = useCallback(() => {
@@ -230,7 +230,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
       }
       const daysDiff = Math.floor(
         (new Date(dateParam).getTime() - new Date(initialDate).getTime()) /
-          (1000 * 60 * 60 * 24)
+          (1000 * 60 * 60 * 24),
       );
       if (daysDiff < -30 || daysDiff > 30) {
         router.replace("/");
@@ -241,16 +241,25 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
 
   // Calculate stat ranges from all teams (once per snapshot, not per date)
   const statRanges = useMemo(() => {
-    if (!snapshot) return { pace: { min: 0, max: 0, median: 0 }, defRating: { min: 0, max: 0, median: 0 } };
+    if (!snapshot)
+      return {
+        pace: { min: 0, max: 0, median: 0 },
+        defRating: { min: 0, max: 0, median: 0 },
+      };
 
-    const paces = snapshot.teams.map(t => t.pace).filter(v => v !== null && !isNaN(v));
-    const defRatings = snapshot.teams.map(t => t.def_rating).filter(v => v !== null && !isNaN(v));
+    const paces = snapshot.teams
+      .map((t) => t.pace)
+      .filter((v) => v !== null && !isNaN(v));
+    const defRatings = snapshot.teams
+      .map((t) => t.def_rating)
+      .filter((v) => v !== null && !isNaN(v));
 
     const getStats = (values: number[]) => {
       if (values.length === 0) return { min: 0, max: 0, median: 0 };
       const sorted = [...values].sort((a, b) => a - b);
       const mid = Math.floor(sorted.length / 2);
-      const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+      const median =
+        sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
       return { min: sorted[0], max: sorted[sorted.length - 1], median };
     };
 
@@ -297,7 +306,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     allPicks.forEach((pick) => {
       const pickDate = new Date(pick.date);
       const diffDays = Math.floor(
-        (from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24)
+        (from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24),
       );
 
       // Pick counts if it was 1-29 days ago (within 30-day window, but NOT same day)
@@ -421,9 +430,9 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
       timeZone: "Europe/Paris",
     });
 
-    // If game is after midnight Paris time (different date than currentDate), show 00:00
+    // If game is after midnight Paris time (different date than currentDate), show midnight
     if (parisDateStr !== currentDate) {
-      return "00:00";
+      return "midnight";
     }
 
     return gameDate.toLocaleTimeString("fr-FR", {
@@ -474,37 +483,52 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
             )}
           </p>
         </div>
-        <div className="flex flex-col items-start sm:items-end gap-1">
+        <div className="flex flex-row-reverse items-center justify-evenly sm:flex-col sm:items-end gap-2">
           <DateNavigation currentDate={currentDate} />
-          {!loading && deadline && players.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Deadline: <span className="font-semibold text-foreground">{deadline}</span>
-            </p>
+          {(loading || (deadline && players.length > 0)) && (
+            <div
+              className={`flex flex-col items-center sm:flex-row sm:gap-2 w-24 h-12 sm:w-auto sm:h-auto px-3 py-2 sm:px-2.5 sm:py-1 rounded-2xl sm:rounded-full bg-muted/50 border-2 sm:border border-border text-xs text-muted-foreground ${loading ? "opacity-50" : ""}`}
+            >
+              <div className="flex items-center gap-2">
+                <AlarmClock className="h-3.5 w-3.5 shrink-0" />
+                <span>
+                  <span className="hidden sm:inline">Picks lock at </span>
+                  <span className="font-semibold text-foreground">
+                    {loading ? "—" : deadline}
+                  </span>
+                </span>
+              </div>
+              <span className="text-[10px] sm:hidden">Pick deadline</span>
+            </div>
           )}
         </div>
       </div>
 
       {/* Compact forgotten picks banner - only show when NOT on a forgotten date */}
-      {isHydrated && forgottenDates.length > 0 && !forgottenDates.includes(currentDate) && !error && (
-        <Link href="/history" className="block mb-2">
-          <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-500/50 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors cursor-pointer animate-[pulse-notification_2s_cubic-bezier(0.4,0,0.2,1)_1]">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <div className="p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 shrink-0">
-                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+      {isHydrated &&
+        forgottenDates.length > 0 &&
+        !forgottenDates.includes(currentDate) &&
+        !error && (
+          <Link href="/history" className="block mb-2">
+            <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-500/50 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors cursor-pointer animate-[pulse-notification_2s_cubic-bezier(0.4,0,0.2,1)_1]">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className="p-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 shrink-0">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
+                  <span className="text-sm font-semibold text-amber-900 dark:text-amber-100 truncate">
+                    {forgottenDates.length} forgotten pick
+                    {forgottenDates.length !== 1 ? "s" : ""}
+                  </span>
+                  <span className="text-xs text-amber-700 dark:text-amber-300 truncate">
+                    Click to view & skip
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
-                <span className="text-sm font-semibold text-amber-900 dark:text-amber-100 truncate">
-                  {forgottenDates.length} forgotten pick{forgottenDates.length !== 1 ? "s" : ""}
-                </span>
-                <span className="text-xs text-amber-700 dark:text-amber-300 truncate">
-                  Click to view & skip
-                </span>
-              </div>
+              <ArrowRight className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" />
             </div>
-            <ArrowRight className="h-4 w-4 text-amber-600 dark:text-amber-500 shrink-0" />
-          </div>
-        </Link>
-      )}
+          </Link>
+        )}
 
       {/* Forgotten pick alert */}
       {isHydrated &&
@@ -523,28 +547,6 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
             }}
           />
         )}
-
-      {/* Error state */}
-      {error && (
-        <Card className="border-destructive/50 shadow-lg animate-slide-up">
-          <CardContent className="flex flex-col items-center py-16">
-            <div className="p-4 rounded-full bg-destructive/10 mb-6">
-              <AlertCircle className="h-16 w-16 text-destructive" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2">Error loading players</h3>
-            <p className="text-muted-foreground mb-6 text-center max-w-md">
-              {error}
-            </p>
-            <Button
-              onClick={() => window.location.reload()}
-              size="lg"
-              className="shadow-md"
-            >
-              Reload Page
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Empty state - only show after loading completes */}
       {!error && !loading && players.length === 0 && (
@@ -578,6 +580,28 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
         selectedGame={selectedGame}
         onGameChange={setSelectedGame}
       />
+
+      {/* Error state */}
+      {error && (
+        <Card className="border-destructive/50 shadow-lg animate-slide-up">
+          <CardContent className="flex flex-col items-center py-16">
+            <div className="p-4 rounded-full bg-destructive/10 mb-6">
+              <AlertCircle className="h-16 w-16 text-destructive" />
+            </div>
+            <h3 className="text-2xl font-bold mb-2">Error loading players</h3>
+            <p className="text-muted-foreground mb-6 text-center max-w-md">
+              {error}
+            </p>
+            <Button
+              onClick={() => window.location.reload()}
+              size="lg"
+              className="shadow-md"
+            >
+              Reload Page
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Players list */}
       {!error && (
