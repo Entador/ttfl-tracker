@@ -71,34 +71,34 @@ function TableSkeleton() {
           </tr>
         </thead>
         <tbody className="divide-y">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({ length: 14 }).map((_, i) => (
             <tr key={i}>
-              <td className="w-10 pl-3 pr-2 py-2"></td>
-              <td className="whitespace-nowrap pr-2 py-3">
+              <td className="w-10 pl-3 pr-2 py-1"></td>
+              <td className="whitespace-nowrap pr-2 py-1">
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-8 w-8 rounded-full bg-blue-200/50" />
                   <Skeleton className="h-4 w-32 bg-blue-200/50" />
                 </div>
               </td>
-              <td className="px-3 py-3 border-l-[3px] border-red-400/50 bg-red-500/3">
+              <td className="px-3 py-1 border-l-[3px] border-red-400/50 bg-red-500/3">
                 <Skeleton className="h-4 w-12 ml-auto bg-blue-200/50" />
               </td>
-              <td className="px-3 py-3 bg-red-500/3">
+              <td className="px-3 py-1 bg-red-500/3">
                 <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
               </td>
-              <td className="px-3 py-3 bg-red-500/3">
+              <td className="px-3 py-1 bg-red-500/3">
                 <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
               </td>
-              <td className="px-3 py-3 border-l-[3px] border-primary/50 bg-primary/3">
+              <td className="px-3 py-1 border-l-[3px] border-primary/50 bg-primary/3">
                 <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
               </td>
-              <td className="px-3 py-3 bg-primary/3">
+              <td className="px-3 py-1 bg-primary/3">
                 <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
               </td>
-              <td className="px-3 py-3 bg-primary/3">
+              <td className="px-3 py-1 bg-primary/3">
                 <Skeleton className="h-4 w-10 ml-auto bg-blue-200/50" />
               </td>
-              <td className="px-2 py-3">
+              <td className="px-2 py-1">
                 <Skeleton className="h-6 w-12 ml-auto rounded bg-blue-200/50" />
               </td>
             </tr>

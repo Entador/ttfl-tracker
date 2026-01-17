@@ -162,7 +162,6 @@ export default function PlayersTable({
   onPickPlayer,
   onRemovePick,
 }: PlayersTableProps) {
-
   return (
     <div className="relative animate-fade-in">
       {loading && (
@@ -220,7 +219,7 @@ export default function PlayersTable({
                   key={player.player_id}
                   className="hover:bg-muted/50 transition-colors leading-tight sm:leading-normal"
                 >
-                  <td className="w-10 pl-2 sm:pl-3 pr-1 sm:pr-2 py-0.5 sm:py-2">
+                  <td className="w-10 pl-2 sm:pl-3 pr-1 sm:pr-2 py-0.5 sm:py-1">
                     <InjuryBadge
                       status={player.injury_status}
                       returnDate={player.injury_return_date}
@@ -228,7 +227,7 @@ export default function PlayersTable({
                     />
                   </td>
                   <td
-                    className={`whitespace-nowrap pr-2 py-0.5 sm:py-2 ${
+                    className={`whitespace-nowrap pr-2 py-0.5 sm:py-1 ${
                       isIneligible ? "opacity-50" : ""
                     }`}
                   >
@@ -240,7 +239,7 @@ export default function PlayersTable({
                     />
                   </td>
                   <td
-                    className={`whitespace-nowrap px-3 py-0.5 sm:py-2 text-muted-foreground border-l-[3px] border-red-400/50 bg-red-500/3 ${
+                    className={`whitespace-nowrap px-3 py-0.5 sm:py-1 text-muted-foreground border-l-[3px] border-red-400/50 bg-red-500/3 ${
                       isIneligible ? "opacity-50" : ""
                     }`}
                   >
@@ -250,54 +249,54 @@ export default function PlayersTable({
                     </span>
                   </td>
                   <td
-                    className={`px-3 py-0.5 sm:py-2 text-right text-muted-foreground tabular-nums bg-red-500/3 ${
+                    className={`px-3 py-0.5 sm:py-1 text-right text-muted-foreground tabular-nums bg-red-500/3 ${
                       isIneligible ? "opacity-50" : ""
                     }`}
                     style={{
                       backgroundColor: getStatBgColor(
                         player.opp_pace,
-                        statRanges.pace
+                        statRanges.pace,
                       ),
                     }}
                   >
                     {player.opp_pace?.toFixed(1) ?? "-"}
                   </td>
                   <td
-                    className={`px-3 py-0.5 sm:py-2 text-right text-muted-foreground tabular-nums bg-red-500/3 ${
+                    className={`px-3 py-0.5 sm:py-1 text-right text-muted-foreground tabular-nums bg-red-500/3 ${
                       isIneligible ? "opacity-50" : ""
                     }`}
                     style={{
                       backgroundColor: getStatBgColor(
                         player.opp_def_rating,
-                        statRanges.defRating
+                        statRanges.defRating,
                       ),
                     }}
                   >
                     {player.opp_def_rating?.toFixed(1) ?? "-"}
                   </td>
                   <td
-                    className={`px-3 py-0.5 sm:py-2 text-right text-muted-foreground tabular-nums border-l-[3px] border-primary/50 bg-primary/3 ${
+                    className={`px-3 py-0.5 sm:py-1 text-right text-muted-foreground tabular-nums border-l-[3px] border-primary/50 bg-primary/3 ${
                       isIneligible ? "opacity-50" : ""
                     }`}
                   >
                     {player.avg_ttfl.toFixed(1)}
                   </td>
                   <td
-                    className={`px-3 py-0.5 sm:py-2 text-right font-semibold tabular-nums bg-primary/3 ${
+                    className={`px-3 py-0.5 sm:py-1 text-right font-semibold tabular-nums bg-primary/3 ${
                       isIneligible ? "opacity-50" : ""
                     }`}
                   >
                     {player.avg_ttfl_l10.toFixed(1)}
                   </td>
                   <td
-                    className={`px-3 py-0.5 sm:py-2 text-right text-muted-foreground tabular-nums bg-primary/3 ${
+                    className={`px-3 py-0.5 sm:py-1 text-right text-muted-foreground tabular-nums bg-primary/3 ${
                       isIneligible ? "opacity-50" : ""
                     }`}
                   >
                     {player.avg_ttfl_l30d.toFixed(1)}
                   </td>
                   <td
-                    className={`px-2 py-0.5 sm:py-2 text-right ${
+                    className={`px-2 py-0.5 sm:py-1 text-right ${
                       isIneligible ? "opacity-50" : ""
                     }`}
                   >
