@@ -4,8 +4,16 @@ on:
   schedule:
     # Run full update daily at 8:00 UTC (9:00 AM Paris time)
     - cron: '0 8 * * *'
-    # Run injury update at 19:00 UTC (8:00 PM Paris time)
+    # Run injury updates before NBA game windows
+    - cron: '0 12 * * *'
+    - cron: '0 15 * * *'
+    - cron: '0 17 * * *'
+    - cron: '0 18 * * *'
     - cron: '0 19 * * *'
+    - cron: '0 20 * * *'
+    - cron: '0 21 * * *'
+    - cron: '0 22 * * *'
+    - cron: '0 23 * * *'
   workflow_dispatch:
     # Allow manual trigger from GitHub UI
     inputs:
@@ -65,10 +73,10 @@ jobs:
           # Manual trigger uses input, scheduled uses schedule time
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "type=${{ inputs.update_type }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.schedule }}" = "0 19 * * *" ]; then
-            echo "type=injuries-only" >> $GITHUB_OUTPUT
-          else
+          elif [ "${{ github.event.schedule }}" = "0 8 * * *" ]; then
             echo "type=full" >> $GITHUB_OUTPUT
+          else
+            echo "type=injuries-only" >> $GITHUB_OUTPUT
           fi
 
       - name: Run full daily update

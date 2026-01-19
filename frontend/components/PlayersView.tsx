@@ -412,6 +412,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
           day: "numeric",
           hour: "numeric",
           minute: "2-digit",
+          hour12: false,
         });
       })()
     : null;
