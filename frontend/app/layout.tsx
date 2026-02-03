@@ -1,8 +1,7 @@
-import { Clock } from "lucide-react";
+import { Calendar, Clock, Trophy } from "lucide-react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
-import { PiBasketball, PiCourtBasketball } from "react-icons/pi";
 import "./globals.css";
 
 const inter = Inter({
@@ -32,7 +31,7 @@ export default function RootLayout({
                 href="/"
                 className="flex items-center gap-2 sm:gap-2 text-base sm:text-xl font-bold tracking-tight hover:text-primary transition-colors"
               >
-                <PiBasketball className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+                <Trophy className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 <p>TTFL Tracker</p>
               </Link>
               <div className="flex text-sm sm:text-base gap-3 sm:gap-6">
@@ -40,7 +39,7 @@ export default function RootLayout({
                   href="/"
                   className="flex items-center gap-1 px-1 sm:px-2 sm:gap-1.5 py-2 font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                 >
-                  <PiCourtBasketball size={20} />
+                  <Calendar className="h-5 w-5" />
                   <span>Dashboard</span>
                 </Link>
                 <Link
