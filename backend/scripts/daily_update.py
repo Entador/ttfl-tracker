@@ -148,11 +148,22 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
             except (ValueError, TypeError):
                 pass
 
+        # gameDate is the NBA logical game day (Eastern Time),
+        # so late games (e.g. 10:30 PM ET) stay on the correct date
+        game_date_str = row.get("gameDate", "")
+        game_date = None
+        if game_date_str:
+            try:
+                game_date = datetime.strptime(game_date_str[:10], "%m/%d/%Y").date()
+            except ValueError:
+                game_date = datetime.strptime(game_date_str[:10], "%Y-%m-%d").date()
+
         schedule_data[game_id] = {
             "status": status,
             "home_score": home_score,
             "away_score": away_score,
             "start_time_utc": parse_utc_datetime(row.get("gameDateTimeUTC")),
+            "game_date": game_date,
         }
 
     print(f"Loaded {len(schedule_data)} games from NBA schedule")
@@ -184,12 +195,20 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
                 game.away_score = new_away_score
             needs_update = True
 
-        # Update start time for scheduled games (times can change before tipoff)
-        new_start_time = schedule_info.get("start_time_utc")
-        if new_status == "scheduled" and new_start_time and game.start_time_utc != new_start_time:
-            if not dry_run:
-                game.start_time_utc = new_start_time
-            needs_update = True
+        # Update date and start time for scheduled games (can change if postponed)
+        if new_status == "scheduled":
+            new_game_date = schedule_info.get("game_date")
+            if new_game_date and game.game_date != new_game_date:
+                if not dry_run:
+                    game.game_date = new_game_date
+                needs_update = True
+                print(f"  [date changed] {game.nba_game_id}: {game.game_date} -> {new_game_date}")
+
+            new_start_time = schedule_info.get("start_time_utc")
+            if new_start_time and game.start_time_utc != new_start_time:
+                if not dry_run:
+                    game.start_time_utc = new_start_time
+                needs_update = True
 
         if needs_update:
             updated_count += 1
