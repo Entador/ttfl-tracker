@@ -17,7 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getAllPlayers, getSnapshot, getTodayET, PlayerBasic } from "@/lib/api";
+import { getAllPlayers, getTodayET, PlayerBasic } from "@/lib/api";
+import { useSnapshot } from "@/lib/hooks/useSnapshot";
 import { getAllPicks, getForgottenDates, Pick, skipDate } from "@/lib/picks";
 import {
   AlertCircle,
@@ -29,7 +30,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface PickWithPlayer extends Pick {
   playerName: string;
@@ -43,10 +44,28 @@ export default function HistoryPage() {
   const [showImport, setShowImport] = useState(false);
   const [forgottenDates, setForgottenDates] = useState<string[]>([]);
 
+  // Fetch snapshot with SWR (cached across pages)
+  const { data: snapshot } = useSnapshot();
+
+  // Load forgotten dates when snapshot is available
+  const loadForgottenDates = useCallback(() => {
+    if (!snapshot) return;
+    try {
+      const todayET = getTodayET();
+      const forgotten = getForgottenDates(snapshot, todayET);
+      setForgottenDates(forgotten);
+    } catch (err) {
+      console.error("Failed to load forgotten dates:", err);
+    }
+  }, [snapshot]);
+
   useEffect(() => {
     loadHistory();
-    loadForgottenDates();
   }, []);
+
+  useEffect(() => {
+    loadForgottenDates();
+  }, [loadForgottenDates]);
 
   async function loadHistory() {
     try {
@@ -92,17 +111,6 @@ export default function HistoryPage() {
       setError(err instanceof Error ? err.message : "Failed to load history");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function loadForgottenDates() {
-    try {
-      const snapshot = await getSnapshot();
-      const todayET = getTodayET();
-      const forgotten = getForgottenDates(snapshot, todayET);
-      setForgottenDates(forgotten);
-    } catch (err) {
-      console.error("Failed to load forgotten dates:", err);
     }
   }
 

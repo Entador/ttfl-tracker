@@ -128,6 +128,11 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
     schedule_data = {}
     for _, row in games_df.iterrows():
         game_id = row["gameId"]
+
+        # Skip non-regular-season games (All-Star games start with "003")
+        if game_id.startswith("003"):
+            continue
+
         game_status = row.get("gameStatus", 1)
 
         if game_status == 3:

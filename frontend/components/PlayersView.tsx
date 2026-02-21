@@ -15,7 +15,8 @@ import PlayersTable from "@/components/PlayersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getSnapshot, getTodayET, SnapshotData } from "@/lib/api";
+import { getTodayET, SnapshotData } from "@/lib/api";
+import { useSnapshot } from "@/lib/hooks/useSnapshot";
 import {
   getAllPicks,
   getForgottenDates,
@@ -128,10 +129,10 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
   const dateParam = searchParams?.get("date");
   const currentDate = dateParam || initialDate;
 
-  // Snapshot data state (fetched once on mount)
-  const [snapshot, setSnapshot] = useState<SnapshotData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Fetch snapshot with SWR (cached across pages)
+  const { data: snapshot, error: swrError, isLoading } = useSnapshot();
+  const loading = isLoading;
+  const error = swrError?.message || null;
 
   // Filter/sort state
   const [sortBy, setSortBy] = useState<SortOption>("avg-desc");
@@ -203,23 +204,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     setCurrentPick(null);
   }, [currentDate]);
 
-  // Fetch snapshot once on mount
-  useEffect(() => {
-    const loadSnapshot = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getSnapshot();
-        setSnapshot(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSnapshot();
-  }, []);
+  // Snapshot is fetched via SWR hook (cached across pages)
 
   // Handle date validation (but no refetch - just validation)
   useEffect(() => {

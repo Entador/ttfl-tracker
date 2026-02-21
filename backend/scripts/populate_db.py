@@ -204,6 +204,10 @@ def populate_games(
     for _, row in games_df.iterrows():
         game_id = row["gameId"]
 
+        # Skip non-regular-season games (All-Star games start with "003")
+        if game_id.startswith("003"):
+            continue
+
         # Parse game date
         game_date_str = row.get("gameDate", "")
         if not game_date_str:
