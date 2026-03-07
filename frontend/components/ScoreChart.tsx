@@ -15,6 +15,7 @@ interface GameData {
   game_date: string;
   ttfl_score: number;
   picked: boolean;
+  dnp?: boolean;
 }
 
 interface ScoreChartProps {

@@ -221,17 +221,25 @@ def get_player_stats(player_id: int, db: Session = Depends(get_db)):
         team = app_cache.get_team(player.team_id)
         team_abbrev = team.abbreviation if team else ""
 
-        # Get all season games with TTFL scores
+        # Get all completed games for the player's team, left-joining TTFLScore
+        # so DNP games (no record or minutes=0) are also included
+        from sqlalchemy import or_
         recent_scores = (
-            db.query(TTFLScore, Game)
-            .join(Game, TTFLScore.game_id == Game.id)
-            .filter(TTFLScore.player_id == player.id)
+            db.query(Game, TTFLScore)
+            .outerjoin(
+                TTFLScore,
+                (TTFLScore.game_id == Game.id) & (TTFLScore.player_id == player.id)
+            )
+            .filter(
+                or_(Game.home_team_id == player.team_id, Game.away_team_id == player.team_id),
+                Game.status == 'final'
+            )
             .order_by(Game.game_date.desc())
             .all()
         )
 
         games = []
-        for ttfl_record, game in recent_scores:
+        for game, ttfl_record in recent_scores:
             # Determine opponent based on player's team (use cache, no DB query!)
             if player.team_id == game.home_team_id:
                 opponent_team = app_cache.get_team(game.away_team_id)
@@ -240,17 +248,31 @@ def get_player_stats(player_id: int, db: Session = Depends(get_db)):
                 opponent_team = app_cache.get_team(game.home_team_id)
                 is_home = False
 
+            dnp = ttfl_record is None or not ttfl_record.minutes
             games.append({
                 'game_date': game.game_date.isoformat(),
                 'opponent': opponent_team.abbreviation if opponent_team else "UNK",
                 'is_home': is_home,
-                'ttfl_score': ttfl_record.ttfl_score or 0,
-                'minutes': ttfl_record.minutes or 0,
+                'ttfl_score': ttfl_record.ttfl_score if ttfl_record and not dnp else 0,
+                'minutes': ttfl_record.minutes if ttfl_record else 0,
+                'dnp': dnp,
                 'picked': False  # Frontend handles pick tracking
             })
 
         # Calculate average from games where player actually played
         avg_ttfl = _calculate_player_avg_ttfl(db, player.id)
+
+        # Aggregate stats from played games (exclude DNPs)
+        played_scores = [g['ttfl_score'] for g in games if not g['dnp']]
+        best_score = max(played_scores) if played_scores else 0
+        worst_score = min(played_scores) if played_scores else 0
+        if len(played_scores) > 1:
+            mean = sum(played_scores) / len(played_scores)
+            variance = sum((s - mean) ** 2 for s in played_scores) / len(played_scores)
+            std_dev = round(variance ** 0.5, 1)
+        else:
+            std_dev = 0.0
+        consistency = "High" if std_dev < 10 else "Medium" if std_dev < 15 else "Low"
 
         return {
             'player': {
@@ -259,7 +281,11 @@ def get_player_stats(player_id: int, db: Session = Depends(get_db)):
                 'team': team_abbrev
             },
             'recent_games': games,
-            'avg_ttfl': avg_ttfl
+            'avg_ttfl': avg_ttfl,
+            'best_score': best_score,
+            'worst_score': worst_score,
+            'std_dev': std_dev,
+            'consistency': consistency,
         }
 
     except HTTPException:

@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 
 interface ScoreBadgeProps {
-  score: number;
+  score?: number;
+  dnp?: boolean;
   className?: string;
 }
 
@@ -43,13 +44,26 @@ function getScoreColor(score: number): { bg: string; text: string } {
   return { bg: "bg-purple-500", text: "text-white" };
 }
 
-export function ScoreBadge({ score, className }: ScoreBadgeProps) {
-  const colors = getScoreColor(score);
+export function ScoreBadge({ score, dnp, className }: ScoreBadgeProps) {
+  if (dnp) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center justify-center w-12 py-1 text-sm font-medium tracking-wider text-muted-foreground",
+          className
+        )}
+      >
+        DNP
+      </span>
+    );
+  }
+
+  const colors = getScoreColor(score ?? 0);
 
   return (
     <div
       className={cn(
-        "inline-flex items-center justify-center rounded-lg border border-transparent px-3 py-1 text-sm font-bold shadow-md",
+        "inline-flex items-center justify-center rounded-lg border border-transparent w-12 py-1 text-sm font-bold shadow-md",
         colors.bg,
         colors.text,
         className

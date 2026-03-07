@@ -49,9 +49,14 @@ export interface PlayerStats {
     is_home: boolean;
     ttfl_score: number;
     minutes: number;
+    dnp: boolean;
     picked: boolean;
   }>;
   avg_ttfl: number;
+  best_score: number;
+  worst_score: number;
+  std_dev: number;
+  consistency: "High" | "Medium" | "Low";
 }
 
 export interface PickHistory {

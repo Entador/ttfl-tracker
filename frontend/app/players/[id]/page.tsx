@@ -103,6 +103,7 @@ export default function PlayerDetailPage() {
     );
   }
 
+  const playedGames = data.recent_games.filter((g) => !g.dnp);
   const pickedGames = data.recent_games.filter((g) => g.picked);
   const avgPicked =
     pickedGames.length > 0
@@ -112,17 +113,7 @@ export default function PlayerDetailPage() {
         ).toFixed(1)
       : "0.0";
 
-  const bestScore = Math.max(...data.recent_games.map((g) => g.ttfl_score));
-  const worstScore = Math.min(...data.recent_games.map((g) => g.ttfl_score));
-
-  // Calculate consistency (lower standard deviation = more consistent)
-  const scores = data.recent_games.map((g) => g.ttfl_score);
-  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
-  const variance =
-    scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) /
-    scores.length;
-  const stdDev = Math.sqrt(variance);
-  const consistency = stdDev < 10 ? "High" : stdDev < 15 ? "Medium" : "Low";
+  const { best_score, worst_score, std_dev, consistency } = data;
 
   return (
     <div className="space-y-4">
@@ -167,7 +158,7 @@ export default function PlayerDetailPage() {
               {data.avg_ttfl.toFixed(1)}
             </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium">
-              Last {data.recent_games.length} games
+              Last {playedGames.length} games played
             </p>
           </CardContent>
         </Card>
@@ -203,9 +194,9 @@ export default function PlayerDetailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pb-3 sm:pb-4 px-3 sm:px-6">
-            <div className="text-2xl sm:text-3xl font-black">{bestScore}</div>
+            <div className="text-2xl sm:text-3xl font-black">{best_score}</div>
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium">
-              Worst: {worstScore} pts
+              Worst: {worst_score} pts
             </p>
           </CardContent>
         </Card>
@@ -224,7 +215,7 @@ export default function PlayerDetailPage() {
               {consistency}
             </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium">
-              Std Dev: {stdDev.toFixed(1)}
+              Std Dev: {std_dev.toFixed(1)}
             </p>
           </CardContent>
         </Card>
@@ -237,7 +228,8 @@ export default function PlayerDetailPage() {
           <CardHeader className="pb-3 shrink-0">
             <CardTitle className="text-lg">Recent Games</CardTitle>
             <CardDescription className="text-sm">
-              Last {data.recent_games.length} games
+              Last {data.recent_games.length} games ({playedGames.length}{" "}
+              played)
             </CardDescription>
           </CardHeader>
           <CardContent className="pb-4 overflow-y-scroll">
@@ -270,7 +262,7 @@ export default function PlayerDetailPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right py-1.5">
-                      <ScoreBadge score={game.ttfl_score} />
+                      <ScoreBadge score={game.ttfl_score} dnp={game.dnp} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -289,7 +281,7 @@ export default function PlayerDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pb-4">
-              <ScoreChart games={data.recent_games} avgScore={data.avg_ttfl} />
+              <ScoreChart games={playedGames} avgScore={data.avg_ttfl} />
             </CardContent>
           </Card>
 
@@ -308,8 +300,8 @@ export default function PlayerDetailPage() {
                     {data.avg_ttfl >= 45
                       ? "Elite player with consistently high scores"
                       : data.avg_ttfl >= 35
-                      ? "Solid performer with good scoring potential"
-                      : "Developing player with room for improvement"}
+                        ? "Solid performer with good scoring potential"
+                        : "Developing player with room for improvement"}
                   </p>
                 </div>
               </div>
@@ -338,8 +330,8 @@ export default function PlayerDetailPage() {
                     {consistency === "High"
                       ? "Very reliable with minimal variance in performance"
                       : consistency === "Medium"
-                      ? "Moderate consistency with occasional fluctuations"
-                      : "High variance - performance can be unpredictable"}
+                        ? "Moderate consistency with occasional fluctuations"
+                        : "High variance - performance can be unpredictable"}
                   </p>
                 </div>
               </div>
