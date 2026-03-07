@@ -110,6 +110,7 @@ export interface PlayerWithEligibility extends Player {
   is_eligible: boolean;
   last_picked_date: string | null;
   days_until_eligible: number | null;
+  is_back_to_back: boolean;
 }
 
 interface StatRange {
@@ -231,12 +232,22 @@ export default function PlayersTable({
                       isIneligible ? "opacity-50" : ""
                     }`}
                   >
-                    <PlayerInfo
-                      playerId={player.player_id}
-                      name={player.name}
-                      team={player.team}
-                      logoSize={LOGO_SIZE}
-                    />
+                    <div className="flex items-center justify-between sm:pr-2">
+                      <PlayerInfo
+                        playerId={player.player_id}
+                        name={player.name}
+                        team={player.team}
+                        logoSize={LOGO_SIZE}
+                      />
+                      {player.is_back_to_back && (
+                        <span
+                          title="Back-to-back"
+                          className="text-xs font-semibold text-muted-foreground/70 px-1.5 py-0.5 rounded border border-border bg-muted/50"
+                        >
+                          B2B
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td
                     className={`whitespace-nowrap px-3 py-0.5 sm:py-1 text-muted-foreground border-l-[3px] border-red-400/50 bg-red-500/3 ${
@@ -255,7 +266,7 @@ export default function PlayersTable({
                     style={{
                       backgroundColor: getStatBgColor(
                         player.opp_pace,
-                        statRanges.pace,
+                        statRanges.pace
                       ),
                     }}
                   >
@@ -268,7 +279,7 @@ export default function PlayersTable({
                     style={{
                       backgroundColor: getStatBgColor(
                         player.opp_def_rating,
-                        statRanges.defRating,
+                        statRanges.defRating
                       ),
                     }}
                   >
