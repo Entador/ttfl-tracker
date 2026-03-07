@@ -185,9 +185,10 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     setForgottenDates(forgotten);
   }, [snapshot, isHydrated, currentPick]);
 
-  // Reset alert visibility when date changes
+  // Reset alert visibility and game filter when date changes
   useEffect(() => {
     setShowForgottenAlert(true);
+    setSelectedGame(null);
   }, [currentDate]);
 
   // Pick handlers
