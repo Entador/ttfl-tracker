@@ -1,18 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, AlertCircle, CheckCircle2, X } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { parseAndMatchTTFLData } from "@/lib/import";
 import { importPicks } from "@/lib/picks";
+import { AlertCircle, CheckCircle2, Upload, X } from "lucide-react";
+import { useState } from "react";
 
 interface ImportPicksProps {
   onImportComplete: () => void;
   onClose: () => void;
 }
 
-export default function ImportPicks({ onImportComplete, onClose }: ImportPicksProps) {
+export default function ImportPicks({
+  onImportComplete,
+  onClose,
+}: ImportPicksProps) {
   const [tsvData, setTsvData] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
@@ -63,12 +72,11 @@ export default function ImportPicks({ onImportComplete, onClose }: ImportPicksPr
         unmatched,
       });
 
-      // Refresh the parent component
-      if (imported > 0) {
-        setTimeout(() => {
-          onImportComplete();
-        }, 1500);
-      }
+      // Refresh the parent component and close modal after a short delay
+      setTimeout(() => {
+        onImportComplete();
+        onClose();
+      }, 1500);
     } catch (err) {
       setResult({
         success: false,
@@ -92,10 +100,16 @@ export default function ImportPicks({ onImportComplete, onClose }: ImportPicksPr
               Import Historical Picks
             </CardTitle>
             <CardDescription className="mt-2">
-              Paste your TTFL history data from the website (tab-separated format)
+              Paste your TTFL history data from the website (tab-separated
+              format)
             </CardDescription>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="shrink-0"
+          >
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
@@ -120,7 +134,8 @@ export default function ImportPicks({ onImportComplete, onClose }: ImportPicksPr
               <li>Click "Import Picks" to add them to your local history</li>
             </ol>
             <p className="text-xs text-muted-foreground mt-2">
-              Note: Only picks from the last 30 days will be imported to maintain eligibility tracking.
+              Note: Only picks from the last 30 days will be imported to
+              maintain eligibility tracking.
             </p>
           </div>
 
@@ -162,30 +177,39 @@ export default function ImportPicks({ onImportComplete, onClose }: ImportPicksPr
                   {result.success ? (
                     <>
                       <p className="text-sm text-muted-foreground">
-                        Imported {result.imported} pick{result.imported !== 1 ? "s" : ""}
+                        Imported {result.imported} pick
+                        {result.imported !== 1 ? "s" : ""}
                         {result.skipped > 0 && (
-                          <> ({result.skipped} skipped as outside 30-day window)</>
+                          <>
+                            {" "}
+                            ({result.skipped} skipped as outside 30-day window)
+                          </>
                         )}
                       </p>
                       {result.unmatched.length > 0 && (
                         <div className="mt-2">
                           <p className="text-sm font-medium text-amber-600">
                             Warning: {result.unmatched.length} player
-                            {result.unmatched.length !== 1 ? "s" : ""} could not be matched:
+                            {result.unmatched.length !== 1 ? "s" : ""} could not
+                            be matched:
                           </p>
                           <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
                             {result.unmatched.slice(0, 5).map((name, i) => (
                               <li key={i}>• {name}</li>
                             ))}
                             {result.unmatched.length > 5 && (
-                              <li>• ... and {result.unmatched.length - 5} more</li>
+                              <li>
+                                • ... and {result.unmatched.length - 5} more
+                              </li>
                             )}
                           </ul>
                         </div>
                       )}
                     </>
                   ) : (
-                    <p className="text-sm text-muted-foreground">{result.error}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {result.error}
+                    </p>
                   )}
                 </div>
               </div>
@@ -197,7 +221,10 @@ export default function ImportPicks({ onImportComplete, onClose }: ImportPicksPr
             <Button variant="outline" onClick={onClose} disabled={loading}>
               {result?.success ? "Close" : "Cancel"}
             </Button>
-            <Button onClick={handleImport} disabled={loading || !tsvData.trim()}>
+            <Button
+              onClick={handleImport}
+              disabled={loading || !tsvData.trim()}
+            >
               {loading ? (
                 <>
                   <span className="animate-spin mr-2">⏳</span>

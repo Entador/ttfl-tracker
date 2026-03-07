@@ -114,9 +114,14 @@ export default function HistoryPage() {
     }
   }
 
+  function handleImportComplete() {
+    loadHistory();
+    loadForgottenDates();
+  }
+
   function handleSkipDate(date: string) {
     skipDate(date);
-    loadForgottenDates(); // Refresh the list
+    loadForgottenDates();
   }
 
   if (loading) {
@@ -203,7 +208,7 @@ export default function HistoryPage() {
         {/* Import modal */}
         {showImport && (
           <ImportPicks
-            onImportComplete={loadHistory}
+            onImportComplete={handleImportComplete}
             onClose={() => setShowImport(false)}
           />
         )}
@@ -346,7 +351,7 @@ export default function HistoryPage() {
       {/* Import modal */}
       {showImport && (
         <ImportPicks
-          onImportComplete={loadHistory}
+          onImportComplete={handleImportComplete}
           onClose={() => setShowImport(false)}
         />
       )}
