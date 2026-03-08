@@ -129,8 +129,9 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
     for _, row in games_df.iterrows():
         game_id = row["gameId"]
 
-        # Skip non-regular-season games (All-Star games start with "003")
-        if game_id.startswith("003"):
+        # Skip non-regular-season games
+        # "001..." = pre-season, "003..." = All-Star, "004..." = playoffs
+        if game_id.startswith("001") or game_id.startswith("003"):
             continue
 
         game_status = row.get("gameStatus", 1)

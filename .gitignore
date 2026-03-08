@@ -60,3 +60,4 @@ logs/
 backend/ml/artifacts/
 *.pkl
 *.joblib
+ml/artifacts/dataset.csv
