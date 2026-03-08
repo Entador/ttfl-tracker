@@ -12,6 +12,10 @@ dependencies = [
     "nba-api>=1.5.2",
     "pydantic>=2.10.0",
     "httpx>=0.28.0",
+    "lightgbm (>=4.6.0,<5.0.0)",
+    "scikit-learn (>=1.8.0,<2.0.0)",
+    "pandas (>=3.0.1,<4.0.0)",
+    "joblib (>=1.5.3,<2.0.0)",
 ]
 
 [tool.poetry]
@@ -31,3 +35,8 @@ python-dotenv = "^1.0.1"
 nba-api = "^1.5.2"
 pydantic = "^2.10.0"
 httpx = "^0.28.0"
+
+[dependency-groups]
+dev = [
+    "nbstripout (>=0.9.1,<0.10.0)"
+]

@@ -55,3 +55,8 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# ML artifacts (trained model files)
+backend/ml/artifacts/
+*.pkl
+*.joblib
