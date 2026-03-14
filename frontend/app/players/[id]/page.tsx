@@ -29,6 +29,7 @@ import {
   TrendingUp,
   Trophy,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -129,7 +130,27 @@ export default function PlayerDetailPage() {
             Back to Tonight&apos;s Players
           </Link>
         </Button>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Image
+            src={`https://cdn.nba.com/headshots/nba/latest/1040x760/${data.player.id}.png`}
+            alt={data.player.name}
+            width={90}
+            height={70}
+            className="rounded-lg object-cover hidden sm:block"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+          <Image
+            src={`https://cdn.nba.com/headshots/nba/latest/1040x760/${data.player.id}.png`}
+            alt={data.player.name}
+            width={60}
+            height={45}
+            className="rounded-lg object-cover sm:hidden"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight bg-linear-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
             {data.player.name}
           </h1>
