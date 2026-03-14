@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getPlayerStats, PlayerStats } from "@/lib/api";
+import { getAllPicks } from "@/lib/picks";
 import {
   AlertCircle,
   ArrowLeft,
@@ -30,14 +31,16 @@ import {
   Trophy,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const LOGO_SIZE = 40;
 
+const picks = getAllPicks();
+
 export default function PlayerDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const playerId = parseInt(params.id as string);
 
   const [data, setData] = useState<PlayerStats | null>(null);
@@ -93,24 +96,26 @@ export default function PlayerDetailPage() {
           <p className="text-muted-foreground mb-6 text-center max-w-md">
             {error || "Player not found"}
           </p>
-          <Button asChild size="lg" className="shadow-md">
-            <Link href="/">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Tonight&apos;s Players
-            </Link>
+          <Button size="lg" className="shadow-md" onClick={() => router.back()}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to dashboard
           </Button>
         </CardContent>
       </Card>
     );
   }
 
+  const pickedGames = picks.filter((p) => p.playerId === playerId);
+  const pickedDates = new Set(pickedGames.map((p) => p.date));
   const playedGames = data.recent_games.filter((g) => !g.dnp);
-  const pickedGames = data.recent_games.filter((g) => g.picked);
+  const gamesWhenPicked = playedGames.filter((g) =>
+    pickedDates.has(g.game_date)
+  );
   const avgPicked =
-    pickedGames.length > 0
+    gamesWhenPicked.length > 0
       ? (
-          pickedGames.reduce((sum, g) => sum + g.ttfl_score, 0) /
-          pickedGames.length
+          gamesWhenPicked.reduce((sum, g) => sum + g.ttfl_score, 0) /
+          gamesWhenPicked.length
         ).toFixed(1)
       : "0.0";
 
@@ -122,13 +127,11 @@ export default function PlayerDetailPage() {
       <div className="animate-slide-up">
         <Button
           variant="ghost"
-          asChild
           className="mb-3 hover:bg-accent transition-all"
+          onClick={() => router.back()}
         >
-          <Link href="/">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Tonight&apos;s Players
-          </Link>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to dashboard
         </Button>
         <div className="flex items-center gap-3 sm:gap-4">
           <Image
