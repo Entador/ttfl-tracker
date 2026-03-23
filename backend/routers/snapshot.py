@@ -1,5 +1,5 @@
 """Snapshot endpoint: returns all season data in one response."""
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
@@ -53,23 +53,47 @@ def get_snapshot(db: Session = Depends(get_db)):
         injury_metadata = db.query(AppMetadata).filter(AppMetadata.key == "injury_updated_at").first()
         injury_updated_at = injury_metadata.value if injury_metadata else None
 
+        # Compute rank delta: rank by season avg now vs. a week ago
+        # Both windows use the same pool (players with data in BOTH) so ranks are comparable
+        shared_pool = [
+            p for p in all_players
+            if averages.get(p.id, {}).get('avg_ttfl', 0) > 0
+            and averages.get(p.id, {}).get('avg_ttfl_week_ago', 0) > 0
+        ]
+        rank_now = {
+            p.id: i + 1
+            for i, p in enumerate(sorted(shared_pool, key=lambda p: averages[p.id]['avg_ttfl'], reverse=True))
+        }
+        rank_week_ago = {
+            p.id: i + 1
+            for i, p in enumerate(sorted(shared_pool, key=lambda p: averages[p.id]['avg_ttfl_week_ago'], reverse=True))
+        }
+
         # Build players response
         players_data = []
         for player in all_players:
             avgs = averages.get(player.id, {
                 'avg_ttfl': 0.0,
                 'avg_ttfl_l10': 0.0,
-                'avg_ttfl_l30d': 0.0
+                'avg_ttfl_l30d': 0.0,
+                'avg_ttfl_week_ago': 0.0,
             })
+
+            # rank_delta > 0 means rising, < 0 means falling, None means not enough data
+            r_now = rank_now.get(player.id)
+            r_ago = rank_week_ago.get(player.id)
+            rank_delta = (r_ago - r_now) if (r_now is not None and r_ago is not None) else None
 
             players_data.append({
                 'player_id': player.nba_player_id,
                 'name': player.name,
                 'team': player.team.abbreviation if player.team else 'UNK',
                 'team_id': player.team_id,
-                'avg_ttfl': avgs['avg_ttfl'],
-                'avg_ttfl_l10': avgs['avg_ttfl_l10'],
-                'avg_ttfl_l30d': avgs['avg_ttfl_l30d'],
+                'avg_ttfl': round(avgs['avg_ttfl'], 1),
+                'avg_ttfl_week_ago': round(avgs['avg_ttfl_week_ago'], 1),
+                'avg_ttfl_l10': round(avgs['avg_ttfl_l10'], 1),
+                'avg_ttfl_l30d': round(avgs['avg_ttfl_l30d'], 1),
+                'rank_delta': rank_delta,
                 'injury_status': player.injury_status,
                 'injury_return_date': player.injury_return_date,
                 'injury_details': player.injury_details,
@@ -108,7 +132,7 @@ def get_snapshot(db: Session = Depends(get_db)):
 
         return {
             'metadata': {
-                'generated_at': datetime.utcnow().isoformat() + 'Z',
+                'generated_at': datetime.now(timezone.utc).isoformat(),
                 'total_players': len(players_data),
                 'total_games': len(games_data),
                 'total_teams': len(teams_data),

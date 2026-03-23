@@ -1,4 +1,4 @@
-import { Calendar, Clock, Trophy } from "lucide-react";
+import { Calendar, Clock, Trophy, BarChart2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
@@ -41,6 +41,13 @@ export default function RootLayout({
                 >
                   <Calendar className="h-5 w-5" />
                   <span>Dashboard</span>
+                </Link>
+                <Link
+                  href="/players"
+                  className="flex items-center gap-1 px-1 sm:px-2 sm:gap-1.5 py-2 font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+                >
+                  <BarChart2 className="h-4 w-4" />
+                  <span>Rankings</span>
                 </Link>
                 <Link
                   href="/history"

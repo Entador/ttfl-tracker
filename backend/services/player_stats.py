@@ -10,14 +10,21 @@ def batch_calculate_averages(
     db: Session, player_ids: list[int]
 ) -> dict[int, dict[str, float]]:
     """
-    Calculate avg_ttfl, avg_ttfl_l10, avg_ttfl_l30d for multiple players in one query.
+    Calculate TTFL averages for multiple players in a single query.
 
-    Returns dict: {player_id: {'avg_ttfl': x, 'avg_ttfl_l10': y, 'avg_ttfl_l30d': z}}
+    Returns dict: {player_id: {
+        'avg_ttfl': all games this season,
+        'avg_ttfl_l10': last 10 games,
+        'avg_ttfl_l30d': last 30 days,
+        'avg_ttfl_week_ago': all games before 14 days ago (for rank delta and -14d column),
+    }}
     """
     if not player_ids:
         return {}
 
-    cutoff_30d = date.today() - timedelta(days=30)
+    today = date.today()
+    cutoff_30d = today - timedelta(days=30)
+    cutoff_14d = today - timedelta(days=14)
 
     # Single query: get all scores for all players, with game dates
     scores_data = (
@@ -46,22 +53,27 @@ def batch_calculate_averages(
     for player_id in player_ids:
         scores = player_scores.get(player_id, [])
 
-        # avg_ttfl: last 15 games (already sorted by date desc)
-        last_15 = [s[0] for s in scores[:15]]
-        avg_ttfl = round(sum(last_15) / len(last_15), 1) if last_15 else 0.0
+        # avg_ttfl: all games this season
+        all_scores = [s[0] for s in scores]
+        avg_ttfl = sum(all_scores) / len(all_scores) if all_scores else 0.0
 
         # avg_ttfl_l10: last 10 games
         last_10 = [s[0] for s in scores[:10]]
-        avg_ttfl_l10 = round(sum(last_10) / len(last_10), 1) if last_10 else 0.0
+        avg_ttfl_l10 = sum(last_10) / len(last_10) if last_10 else 0.0
 
         # avg_ttfl_l30d: games in last 30 days
         last_30d = [ttfl for ttfl, gd in scores if gd >= cutoff_30d]
-        avg_ttfl_l30d = round(sum(last_30d) / len(last_30d), 1) if last_30d else 0.0
+        avg_ttfl_l30d = sum(last_30d) / len(last_30d) if last_30d else 0.0
+
+        # avg_ttfl_week_ago: all games before 14 days ago (used for rank delta)
+        before_14d = [ttfl for ttfl, gd in scores if gd < cutoff_14d]
+        avg_ttfl_week_ago = sum(before_14d) / len(before_14d) if before_14d else 0.0
 
         result[player_id] = {
             'avg_ttfl': avg_ttfl,
             'avg_ttfl_l10': avg_ttfl_l10,
-            'avg_ttfl_l30d': avg_ttfl_l30d
+            'avg_ttfl_l30d': avg_ttfl_l30d,
+            'avg_ttfl_week_ago': avg_ttfl_week_ago,
         }
 
     return result

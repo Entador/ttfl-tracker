@@ -144,8 +144,10 @@ export interface PlayerSnapshot {
   team: string;
   team_id: number;
   avg_ttfl: number;
+  avg_ttfl_week_ago: number;
   avg_ttfl_l10: number;
   avg_ttfl_l30d: number;
+  rank_delta: number | null;
   injury_status: string | null;
   injury_return_date: string | null;
   injury_details: string | null;

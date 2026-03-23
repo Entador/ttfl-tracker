@@ -15,6 +15,21 @@ import {
 import { Player } from "@/lib/api";
 
 const LOGO_SIZE = 32;
+function RankTrend({ delta }: { delta: number | null }) {
+  if (delta === null || delta === 0)
+    return <span className="text-xs text-muted-foreground/40">—</span>;
+
+  const rising = delta > 0;
+  return (
+    <span
+      title={`${rising ? "+" : ""}${delta} rank vs last week`}
+      className={`inline-flex items-center gap-0.5 text-xs font-medium tabular-nums ${rising ? "text-green-500" : "text-red-500"}`}
+    >
+      {rising ? "▲" : "▼"}
+      {Math.abs(delta)}
+    </span>
+  );
+}
 
 function formatInjuryDetails(details: string) {
   // Split by the words we want to bold, keeping the delimiters
@@ -111,6 +126,8 @@ export interface PlayerWithEligibility extends Player {
   last_picked_date: string | null;
   days_until_eligible: number | null;
   is_back_to_back: boolean;
+  rank_delta: number | null;
+  avg_ttfl_week_ago: number;
 }
 
 interface StatRange {
@@ -187,10 +204,11 @@ export default function PlayersTable({
               </th>
               <th
                 className="px-3 py-2 text-center font-semibold uppercase tracking-wide text-primary border-l-[3px] border-primary/50"
-                colSpan={3}
+                colSpan={4}
               >
                 TTFL
               </th>
+              <th></th>
               <th></th>
             </tr>
             {/* Column headers row */}
@@ -207,8 +225,10 @@ export default function PlayersTable({
               <th className="px-3 py-2 text-right font-medium border-l-[3px] border-primary/50">
                 Season
               </th>
+              <th className="px-3 py-2 text-right font-medium">-14d</th>
               <th className="px-3 py-2 text-right font-medium">L10</th>
               <th className="px-3 py-2 text-right font-medium">30d</th>
+              <th className="w-8 px-2 py-2"></th>
               <th className="w-14 px-2 py-2"></th>
             </tr>
           </thead>
@@ -293,6 +313,13 @@ export default function PlayersTable({
                     {player.avg_ttfl.toFixed(1)}
                   </td>
                   <td
+                    className={`px-3 py-0.5 sm:py-1 text-right text-muted-foreground tabular-nums bg-primary/3 ${
+                      isIneligible ? "opacity-50" : ""
+                    }`}
+                  >
+                    {player.avg_ttfl_week_ago > 0 ? player.avg_ttfl_week_ago.toFixed(1) : "—"}
+                  </td>
+                  <td
                     className={`px-3 py-0.5 sm:py-1 text-right font-semibold tabular-nums bg-primary/3 ${
                       isIneligible ? "opacity-50" : ""
                     }`}
@@ -305,6 +332,9 @@ export default function PlayersTable({
                     }`}
                   >
                     {player.avg_ttfl_l30d.toFixed(1)}
+                  </td>
+                  <td className="px-2 py-0.5 sm:py-1 text-center">
+                    <RankTrend delta={player.rank_delta} />
                   </td>
                   <td
                     className={`px-2 py-0.5 sm:py-1 text-right ${
