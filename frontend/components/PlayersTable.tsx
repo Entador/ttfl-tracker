@@ -59,7 +59,7 @@ function InjuryBadge({
 }) {
   const [open, setOpen] = useState(false);
 
-  if (!status) return null;
+  if (!status || status.toLowerCase() === "available") return null;
 
   const isOut = status.toLowerCase() === "out";
   const label = isOut ? "OUT" : "GTD";
@@ -104,6 +104,11 @@ function InjuryBadge({
         onMouseEnter={() => !isTouch && setOpen(true)}
         onMouseLeave={() => !isTouch && setOpen(false)}
       >
+        {!isOut && (
+          <div className="last:mb-0">
+            <p className="font-semibold text-sm leading-relaxed">{status}</p>
+          </div>
+        )}
         {returnDate && (
           <div className="mb-2 last:mb-0">
             <p className="font-semibold text-sm leading-relaxed">
@@ -113,7 +118,7 @@ function InjuryBadge({
         )}
         {details && (
           <div className="text-xs text-muted-foreground leading-relaxed wrap-break-word">
-            {formatInjuryDetails(details)}
+            Details: {formatInjuryDetails(details)}
           </div>
         )}
       </PopoverContent>
@@ -317,7 +322,9 @@ export default function PlayersTable({
                       isIneligible ? "opacity-50" : ""
                     }`}
                   >
-                    {player.avg_ttfl_week_ago > 0 ? player.avg_ttfl_week_ago.toFixed(1) : "—"}
+                    {player.avg_ttfl_week_ago > 0
+                      ? player.avg_ttfl_week_ago.toFixed(1)
+                      : "—"}
                   </td>
                   <td
                     className={`px-3 py-0.5 sm:py-1 text-right font-semibold tabular-nums bg-primary/3 ${

@@ -8,7 +8,9 @@ Pre-loads static/semi-static data on app startup to reduce database queries:
 """
 
 from typing import Dict, List, Optional
-from datetime import date
+from datetime import date, datetime, timezone
+
+INJURY_TTL_SECONDS = 3600  # 1 hour
 
 
 class AppCache:
@@ -21,6 +23,7 @@ class AppCache:
         self.players_by_nba_id: Dict[int, object] = {}
         self.players_by_team: Dict[int, List] = {}
         self.loaded = False
+        self._injuries_loaded_at: Optional[datetime] = None
 
     def load_schedule(self, db):
         """
@@ -75,6 +78,7 @@ class AppCache:
             self.players_by_team[player.team_id].append(player)
 
         self.loaded = True
+        self._injuries_loaded_at = datetime.now(timezone.utc)
         print(f"  Loaded {len(players)} players")
 
     def get_games_for_date(self, target_date: date) -> List:
@@ -171,6 +175,41 @@ class AppCache:
             return [p for p in players if p.is_active]
         return players
 
+    def refresh_injuries_if_stale(self, db) -> bool:
+        """
+        Re-fetch injury fields from DB if the TTL has expired.
+
+        Only queries the 3 injury columns — does not reload the full cache.
+        Called on each snapshot request; no-ops if data is still fresh.
+
+        Returns True if a refresh was performed.
+        """
+        if not self.loaded:
+            return False
+
+        now = datetime.now(timezone.utc)
+        if (self._injuries_loaded_at is not None and
+                (now - self._injuries_loaded_at).total_seconds() < INJURY_TTL_SECONDS):
+            return False
+
+        from models import Player
+        from sqlalchemy import text
+
+        rows = db.execute(
+            text("SELECT id, injury_status, injury_return_date, injury_details FROM players")
+        ).fetchall()
+
+        for row in rows:
+            player = self.players_by_id.get(row.id)
+            if player:
+                player.injury_status = row.injury_status
+                player.injury_return_date = row.injury_return_date
+                player.injury_details = row.injury_details
+
+        self._injuries_loaded_at = now
+        print(f"Cache: refreshed injury data for {len(rows)} players")
+        return True
+
     def clear(self):
         """Clear the cache"""
         self.games_by_date = {}
@@ -179,6 +218,7 @@ class AppCache:
         self.players_by_nba_id = {}
         self.players_by_team = {}
         self.loaded = False
+        self._injuries_loaded_at = None
 
 
 # Global singleton

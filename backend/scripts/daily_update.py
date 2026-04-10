@@ -67,6 +67,7 @@ from models import Team, Player, Game, TTFLScore, AppMetadata
 from services.nba_api import get_current_season, get_all_team_stats, get_game_box_scores, get_player_stats, get_proxy_url
 from services.ttfl import calculate_ttfl_score
 from services.injuries import update_player_injuries
+from services.injuries_nba import update_player_injuries_nba
 
 
 def parse_utc_datetime(dt_string: str) -> datetime | None:
@@ -492,23 +493,33 @@ def update_team_stats(db: Session, dry_run: bool = False) -> int:
 
 def update_injuries(db: Session, dry_run: bool = False) -> dict:
     """
-    Update player injury status from ESPN.
+    Update player injury status.
+
+    Source is controlled by INJURY_SOURCE env var:
+      - "nba"   → official.nba.com PDF report (default)
+      - "espn"  → ESPN injuries page
 
     Returns:
         Dict with update stats
     """
+    import os
+    injury_source = os.getenv("INJURY_SOURCE", "nba").lower()
+
     print("\n" + "=" * 50)
     print("Phase 4: Update Player Injuries")
     print("=" * 50)
 
-    print("Fetching injury data from ESPN...")
+    print(f"Fetching injury data from {injury_source.upper()}...")
 
     if dry_run:
-        print("*** DRY RUN - Would update injuries from ESPN ***")
+        print(f"*** DRY RUN - Would update injuries from {injury_source.upper()} ***")
         return {"updated": 0, "cleared": 0, "not_found": []}
 
     try:
-        result = update_player_injuries(db)
+        if injury_source == "espn":
+            result = update_player_injuries(db)
+        else:
+            result = update_player_injuries_nba(db)
 
         # Update the injury metadata timestamp
         metadata = db.query(AppMetadata).filter(AppMetadata.key == "injury_updated_at").first()

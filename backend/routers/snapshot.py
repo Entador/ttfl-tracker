@@ -39,6 +39,9 @@ def get_snapshot(db: Session = Depends(get_db)):
         for games_list in app_cache.games_by_date.values():
             all_games.extend(games_list)
 
+        # Refresh injury data from DB if stale (TTL: 1 hour)
+        app_cache.refresh_injuries_if_stale(db)
+
         # Get all active players from cache
         all_players = [p for p in app_cache.players_by_id.values() if p.is_active]
 
