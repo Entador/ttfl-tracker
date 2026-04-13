@@ -1,4 +1,4 @@
-import { Calendar, Clock, Trophy, BarChart2 } from "lucide-react";
+import { BarChart2, Calendar, Clock, Trophy } from "lucide-react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
@@ -23,7 +23,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} min-h-screen bg-background antialiased`}>
+      <body
+        className={`${inter.className} min-h-screen bg-background antialiased`}
+      >
         <nav className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-md shadow-sm">
           <div className="container mx-auto px-3 sm:px-6 lg:px-8">
             <div className="flex h-16 items-center justify-between">
@@ -44,7 +46,7 @@ export default function RootLayout({
                 </Link>
                 <Link
                   href="/players"
-                  className="flex items-center gap-1 px-1 sm:px-2 sm:gap-1.5 py-2 font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+                  className="hidden sm:flex items-center gap-1 sm:gap-1.5 px-1 sm:px-2 py-2 font-medium rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                 >
                   <BarChart2 className="h-4 w-4" />
                   <span>Rankings</span>

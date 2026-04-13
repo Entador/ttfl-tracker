@@ -171,6 +171,8 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
             "away_score": away_score,
             "start_time_utc": parse_utc_datetime(row.get("gameDateTimeUTC")),
             "game_date": game_date,
+            "home_team_nba_id": row.get("homeTeam_teamId"),
+            "away_team_nba_id": row.get("awayTeam_teamId"),
         }
 
     print(f"Loaded {len(schedule_data)} games from NBA schedule")
@@ -227,11 +229,57 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
     if not dry_run:
         db.commit()
 
+    # Insert new playoff/play-in games not yet in the database
+    # "004..." = playoffs, "005..." = play-in tournament
+    playoff_added = 0
+    playoff_game_ids = {g_id for g_id in schedule_data if g_id.startswith("004") or g_id.startswith("005")}
+    if playoff_game_ids:
+        existing_game_ids = {
+            g.nba_game_id for g in db.query(Game.nba_game_id)
+            .filter(Game.nba_game_id.in_(playoff_game_ids))
+            .all()
+        }
+        new_playoff_ids = playoff_game_ids - existing_game_ids
+
+        if new_playoff_ids:
+            # Load team map for lookups
+            from models import Team
+            db_teams = db.query(Team).all()
+            team_map = {t.nba_team_id: t.id for t in db_teams}
+
+            print(f"\nFound {len(new_playoff_ids)} new playoff games to add")
+            for game_id in sorted(new_playoff_ids):
+                info = schedule_data[game_id]
+                home_team_id = team_map.get(info["home_team_nba_id"])
+                away_team_id = team_map.get(info["away_team_nba_id"])
+
+                if not home_team_id or not away_team_id:
+                    print(f"  [skip] {game_id} - unknown team IDs")
+                    continue
+
+                if not dry_run:
+                    db.add(Game(
+                        nba_game_id=game_id,
+                        game_date=info["game_date"],
+                        home_team_id=home_team_id,
+                        away_team_id=away_team_id,
+                        status=info["status"],
+                        home_score=info["home_score"],
+                        away_score=info["away_score"],
+                        start_time_utc=info["start_time_utc"],
+                    ))
+
+                playoff_added += 1
+                print(f"  [new playoff] {game_id} ({info['game_date']}) -> {info['status']}")
+
+            if not dry_run:
+                db.commit()
+
     # Summary
     final_count = db.query(Game).filter(Game.status == "final").count()
     scheduled_count = db.query(Game).filter(Game.status == "scheduled").count()
 
-    print(f"\nUpdated: {updated_count}")
+    print(f"\nUpdated: {updated_count}, Playoff games added: {playoff_added}")
     print(f"Total in DB: {final_count} final, {scheduled_count} scheduled")
 
     return updated_count
@@ -258,7 +306,6 @@ def populate_ttfl_scores(db: Session, dry_run: bool = False) -> tuple[int, int, 
     # Pre-load all players for efficient lookup
     players = db.query(Player).all()
     player_map = {p.nba_player_id: p.id for p in players}
-    player_by_id = {p.id: p for p in players}
 
     # Find final regular season games without any TTFL scores
     games_with_scores = db.query(TTFLScore.game_id).distinct()
