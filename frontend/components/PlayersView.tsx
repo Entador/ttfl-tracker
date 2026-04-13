@@ -287,7 +287,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     // Playoff rules: 30-day window suspended, only 1 pick allowed for entire playoffs
     if (isPlayoffPeriod) {
       const playoffPickedIds = new Set(
-        allPicks.filter(p => p.playoff && !p.isSkipped).map(p => p.playerId)
+        allPicks.filter(p => p.playoff && !p.isSkipped && p.date !== currentDate).map(p => p.playerId)
       );
       return players.map((player) => ({
         ...player,
