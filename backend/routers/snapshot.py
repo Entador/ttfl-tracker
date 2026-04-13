@@ -133,11 +133,13 @@ def get_snapshot(db: Session = Depends(get_db)):
                 if date_str not in earliest_game_times or time_iso < earliest_game_times[date_str]:
                     earliest_game_times[date_str] = time_iso
 
-        # Playoff period: at least one playoff game (004...) has started or is today
+        # Playoff period: all regular season games are done, or next scheduled games are playoffs
         today = date.today()
-        is_playoff_period = any(
-            game.nba_game_id.startswith('004') and game.game_date <= today
-            for game in all_games
+        regular_season_games = [g for g in all_games if g.nba_game_id.startswith('002')]
+        upcoming_games = [g for g in all_games if g.game_date >= today]
+        is_playoff_period = (
+            (bool(regular_season_games) and all(g.game_date < today for g in regular_season_games))
+            or any(g.nba_game_id.startswith('004') for g in upcoming_games)
         )
 
         return {

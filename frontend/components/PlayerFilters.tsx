@@ -11,7 +11,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { Check, SortAsc, Trophy } from "lucide-react";
 import { useState } from "react";
@@ -53,6 +52,7 @@ export default function PlayerFilters({
   selectedGame,
   onGameChange,
 }: PlayerFiltersProps) {
+  const filterBadgeClass = "cursor-pointer shrink-0 px-2 sm:px-3 py-2 text-[11px] sm:text-xs leading-none";
   const [open, setOpen] = useState(false);
   const selectedGameData = games.find((g) => g.key === selectedGame);
 
@@ -132,21 +132,21 @@ export default function PlayerFilters({
         </Popover>
         <Badge
           variant={filterBy === "available" ? "default" : "outline"}
-          className="cursor-pointer shrink-0 px-2 sm:px-3 py-2 sm:py-2 text-[11px] sm:text-xs leading-none"
+          className={filterBadgeClass}
           onClick={() => onFilterChange("available")}
         >
           Available: {availableCount ?? "—"}
         </Badge>
         <Badge
           variant={filterBy === "all" ? "default" : "outline"}
-          className="cursor-pointer shrink-0 px-2 sm:px-3 py-2 sm:py-2 text-[11px] sm:text-xs leading-none"
+          className={filterBadgeClass}
           onClick={() => onFilterChange("all")}
         >
           All: {totalCount ?? "—"}
         </Badge>
         <Badge
           variant={filterBy === "locked" ? "default" : "outline"}
-          className="cursor-pointer shrink-0 px-2 sm:px-3 py-2 sm:py-2 text-[11px] sm:text-xs leading-none"
+          className={filterBadgeClass}
           onClick={() => onFilterChange("locked")}
         >
           Locked: {lockedCount ?? "—"}
