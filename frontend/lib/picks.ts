@@ -9,6 +9,7 @@ export interface Pick {
   playerId: number;
   date: string; // YYYY-MM-DD format
   isSkipped?: boolean; // true if date was intentionally skipped (no pick made)
+  playoff?: boolean; // true if pick was made during playoff period
 }
 
 /**
@@ -31,14 +32,14 @@ export function getAllPicks(): Pick[] {
  * Save a pick for a specific date.
  * Replaces any existing pick for that date.
  */
-export function savePick(playerId: number, date: string): void {
+export function savePick(playerId: number, date: string, playoff?: boolean): void {
   const picks = getAllPicks();
 
   // Remove existing pick for this date (if any)
   const filtered = picks.filter(p => p.date !== date);
 
   // Add new pick
-  filtered.push({ playerId, date });
+  filtered.push({ playerId, date, ...(playoff ? { playoff: true } : {}) });
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
 }

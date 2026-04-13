@@ -1,5 +1,5 @@
 """Snapshot endpoint: returns all season data in one response."""
-from datetime import datetime, timezone
+from datetime import datetime, date, timezone
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
@@ -133,6 +133,13 @@ def get_snapshot(db: Session = Depends(get_db)):
                 if date_str not in earliest_game_times or time_iso < earliest_game_times[date_str]:
                     earliest_game_times[date_str] = time_iso
 
+        # Playoff period: at least one playoff game (004...) has started or is today
+        today = date.today()
+        is_playoff_period = any(
+            game.nba_game_id.startswith('004') and game.game_date <= today
+            for game in all_games
+        )
+
         return {
             'metadata': {
                 'generated_at': datetime.now(timezone.utc).isoformat(),
@@ -141,6 +148,7 @@ def get_snapshot(db: Session = Depends(get_db)):
                 'total_teams': len(teams_data),
                 'injury_updated_at': injury_updated_at,
                 'earliest_game_times': earliest_game_times,
+                'is_playoff_period': is_playoff_period,
             },
             'players': players_data,
             'games': games_data,

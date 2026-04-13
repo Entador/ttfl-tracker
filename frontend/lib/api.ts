@@ -136,6 +136,7 @@ export interface SnapshotMetadata {
   total_teams: number;
   injury_updated_at: string | null;
   earliest_game_times: Record<string, string>; // date (YYYY-MM-DD) -> ISO timestamp
+  is_playoff_period: boolean;
 }
 
 export interface PlayerSnapshot {

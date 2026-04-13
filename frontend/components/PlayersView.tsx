@@ -15,7 +15,7 @@ import PlayersTable from "@/components/PlayersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getTodayET, SnapshotData } from "@/lib/api";
+import { getTodayET } from "@/lib/api";
 import { useSnapshot } from "@/lib/hooks/useSnapshot";
 import {
   getAllPicks,
@@ -194,10 +194,10 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
   // Pick handlers
   const handlePickPlayer = useCallback(
     (playerId: number) => {
-      savePick(playerId, currentDate);
+      savePick(playerId, currentDate, snapshot?.metadata.is_playoff_period);
       setCurrentPick(playerId);
     },
-    [currentDate],
+    [currentDate, snapshot]
   );
 
   const handleRemovePick = useCallback(() => {
@@ -216,7 +216,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
       }
       const daysDiff = Math.floor(
         (new Date(dateParam).getTime() - new Date(initialDate).getTime()) /
-          (1000 * 60 * 60 * 24),
+          (1000 * 60 * 60 * 24)
       );
       if (daysDiff < -30 || daysDiff > 30) {
         router.replace("/");
@@ -267,6 +267,8 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     return getGamesForDate(snapshot, currentDate);
   }, [snapshot, currentDate]);
 
+  const isPlayoffPeriod = snapshot?.metadata.is_playoff_period ?? false;
+
   // Add eligibility info from localStorage
   // currentPick triggers recalc when user picks/unpicks a player
   const playersWithEligibility = useMemo(() => {
@@ -281,6 +283,21 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
 
     // Read localStorage once and build lookup map for performance
     const allPicks = getAllPicks();
+
+    // Playoff rules: 30-day window suspended, only 1 pick allowed for entire playoffs
+    if (isPlayoffPeriod) {
+      const playoffPickedIds = new Set(
+        allPicks.filter(p => p.playoff && !p.isSkipped).map(p => p.playerId)
+      );
+      return players.map((player) => ({
+        ...player,
+        is_eligible: !playoffPickedIds.has(player.player_id),
+        last_picked_date: null,
+        days_until_eligible: null,
+      }));
+    }
+
+    // Regular season: 30-day window
     const from = new Date(currentDate);
 
     // Build map of playerId -> last pick date within 30-day window
@@ -292,7 +309,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     allPicks.forEach((pick) => {
       const pickDate = new Date(pick.date);
       const diffDays = Math.floor(
-        (from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24),
+        (from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24)
       );
 
       // Pick counts if it was 1-29 days ago (within 30-day window, but NOT same day)
@@ -318,7 +335,7 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [players, currentDate, isHydrated, currentPick]);
+  }, [players, currentDate, isHydrated, currentPick, isPlayoffPeriod]);
 
   // Filter and sort players
   const filteredPlayers = useMemo(() => {
@@ -472,22 +489,20 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
         </div>
         <div className="flex flex-row-reverse items-center justify-evenly sm:flex-col sm:items-end gap-2">
           <DateNavigation currentDate={currentDate} />
-          {(loading || (deadline && players.length > 0)) && (
-            <div
-              className={`flex flex-col items-center sm:flex-row sm:gap-2 w-24 h-12 sm:w-auto sm:h-auto px-3 py-2 sm:px-2.5 sm:py-1 rounded-2xl sm:rounded-full bg-muted/50 border-2 sm:border border-border text-xs text-muted-foreground ${loading ? "opacity-50" : ""}`}
-            >
-              <div className="flex items-center gap-2">
-                <AlarmClock className="h-3.5 w-3.5 shrink-0" />
-                <span>
-                  <span className="hidden sm:inline">Picks lock at </span>
-                  <span className="font-semibold text-foreground">
-                    {loading ? "—" : deadline}
-                  </span>
+          <div
+            className={`flex flex-col items-center sm:flex-row sm:gap-2 w-24 h-12 sm:w-auto sm:h-auto px-3 py-2 sm:px-2.5 sm:py-1 rounded-2xl sm:rounded-full bg-muted/50 border-2 sm:border border-border text-xs text-muted-foreground ${loading ? "opacity-50" : ""}`}
+          >
+            <div className="flex items-center gap-2">
+              <AlarmClock className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                <span className="hidden sm:inline">Picks lock at </span>
+                <span className="font-semibold text-foreground">
+                  {loading ? "—" : (deadline ?? "—")}
                 </span>
-              </div>
-              <span className="text-[10px] sm:hidden">Pick deadline</span>
+              </span>
             </div>
-          )}
+            <span className="text-[10px] sm:hidden">Pick deadline</span>
+          </div>
         </div>
       </div>
 
@@ -535,23 +550,6 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
           />
         )}
 
-      {/* Empty state - only show after loading completes */}
-      {!error && !loading && players.length === 0 && (
-        <Card className="animate-slide-up">
-          <CardContent className="flex flex-col items-center py-16">
-            <div className="p-4 rounded-full bg-muted/50 mb-6">
-              <Calendar className="h-16 w-16 text-muted-foreground" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2">No games scheduled</h3>
-            <p className="text-muted-foreground text-center max-w-md">
-              {currentDate === initialDate
-                ? "Check back later for tonight's games"
-                : "No games scheduled for this date"}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       <PlayerFilters
         sortBy={sortBy}
         onSortChange={setSortBy}
@@ -567,6 +565,25 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
         selectedGame={selectedGame}
         onGameChange={setSelectedGame}
       />
+
+      {/* Empty state - only show after loading completes */}
+      {!error && !loading && players.length === 0 && (
+        <Card className="animate-slide-up">
+          <CardContent className="flex flex-col items-center py-16">
+            <div className="p-4 rounded-full bg-muted/50 mb-6">
+              <Calendar className="h-16 w-16 text-muted-foreground" />
+            </div>
+            <h3 className="text-2xl font-bold mb-2 text-center">
+              No games scheduled
+            </h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              {currentDate === initialDate
+                ? "Check back later for tonight's games"
+                : "No games scheduled for this date"}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Error state */}
       {error && (
