@@ -1,23 +1,23 @@
 "use client";
 
-import { AlarmClock, AlertCircle, Calendar } from "lucide-react";
+import { AlarmClock, AlertCircle, AlertTriangle, ArrowRight, Calendar } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import DateNavigation from "@/components/DateNavigation";
 import ForgottenPickAlert from "@/components/ForgottenPickAlert";
-import PlayerFilters, {
-  FilterOption,
-  SortOption,
-} from "@/components/PlayerFilters";
+import PlayerFilters from "@/components/PlayerFilters";
 import PlayersTable from "@/components/PlayersTable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getTodayET } from "@/lib/api";
 import { useSnapshot } from "@/lib/hooks/useSnapshot";
+import { FilterOption, PlayerWithEligibility, SortOption, filterAndSortPlayers } from "@/lib/players";
 import {
+  enrichPlayersWithEligibility,
   getAllPicks,
   getForgottenDates,
   getPickForDate,
@@ -25,9 +25,14 @@ import {
   savePick,
   skipDate,
 } from "@/lib/picks";
-import { getGamesForDate, getPlayersForDate } from "@/lib/snapshot";
-import { AlertTriangle, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import {
+  computeStatRanges,
+  formatGamesForFilter,
+  formatInjuryUpdateTime,
+  getDeadlineForDate,
+  getGamesForDate,
+  getPlayersForDate,
+} from "@/lib/snapshot";
 
 function TableSkeleton() {
   return (
@@ -226,34 +231,10 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
   }, [currentDate, dateParam, router, initialDate]);
 
   // Calculate stat ranges from all teams (once per snapshot, not per date)
-  const statRanges = useMemo(() => {
-    if (!snapshot)
-      return {
-        pace: { min: 0, max: 0, median: 0 },
-        defRating: { min: 0, max: 0, median: 0 },
-      };
-
-    const paces = snapshot.teams
-      .map((t) => t.pace)
-      .filter((v) => v !== null && !isNaN(v));
-    const defRatings = snapshot.teams
-      .map((t) => t.def_rating)
-      .filter((v) => v !== null && !isNaN(v));
-
-    const getStats = (values: number[]) => {
-      if (values.length === 0) return { min: 0, max: 0, median: 0 };
-      const sorted = [...values].sort((a, b) => a - b);
-      const mid = Math.floor(sorted.length / 2);
-      const median =
-        sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-      return { min: sorted[0], max: sorted[sorted.length - 1], median };
-    };
-
-    return {
-      pace: getStats(paces),
-      defRating: getStats(defRatings),
-    };
-  }, [snapshot]);
+  const statRanges = useMemo(
+    () => computeStatRanges(snapshot?.teams ?? []),
+    [snapshot]
+  );
 
   // Filter players for current date from snapshot
   const players = useMemo(() => {
@@ -267,11 +248,11 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
     return getGamesForDate(snapshot, currentDate);
   }, [snapshot, currentDate]);
 
-  const isPlayoffPeriod = snapshot?.metadata.is_playoff_period ?? false;
+  const playoffStartDate = snapshot?.metadata.playoff_start_date ?? null;
 
   // Add eligibility info from localStorage
   // currentPick triggers recalc when user picks/unpicks a player
-  const playersWithEligibility = useMemo(() => {
+  const playersWithEligibility = useMemo((): PlayerWithEligibility[] => {
     if (!isHydrated) {
       return players.map((player) => ({
         ...player,
@@ -280,103 +261,20 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
         days_until_eligible: null,
       }));
     }
-
-    // Read localStorage once and build lookup map for performance
-    const allPicks = getAllPicks();
-
-    // Playoff rules: 30-day window suspended, only 1 pick allowed for entire playoffs
-    if (isPlayoffPeriod) {
-      const playoffPickedIds = new Set(
-        allPicks.filter(p => p.playoff && !p.isSkipped && p.date !== currentDate).map(p => p.playerId)
-      );
-      return players.map((player) => ({
-        ...player,
-        is_eligible: !playoffPickedIds.has(player.player_id),
-        last_picked_date: null,
-        days_until_eligible: null,
-      }));
-    }
-
-    // Regular season: 30-day window
-    const from = new Date(currentDate);
-
-    // Build map of playerId -> last pick date within 30-day window
-    const eligibilityMap = new Map<
-      number,
-      { lastPickedDate: string; daysUntilEligible: number }
-    >();
-
-    allPicks.forEach((pick) => {
-      const pickDate = new Date(pick.date);
-      const diffDays = Math.floor(
-        (from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      // Pick counts if it was 1-29 days ago (within 30-day window, but NOT same day)
-      if (diffDays > 0 && diffDays < 30) {
-        const existing = eligibilityMap.get(pick.playerId);
-        // Keep the most recent pick
-        if (!existing || pick.date > existing.lastPickedDate) {
-          eligibilityMap.set(pick.playerId, {
-            lastPickedDate: pick.date,
-            daysUntilEligible: 30 - diffDays,
-          });
-        }
-      }
-    });
-
-    return players.map((player) => {
-      const eligibility = eligibilityMap.get(player.player_id);
-      return {
-        ...player,
-        is_eligible: !eligibility,
-        last_picked_date: eligibility?.lastPickedDate || null,
-        days_until_eligible: eligibility?.daysUntilEligible || null,
-      };
-    });
+    return enrichPlayersWithEligibility(
+      players,
+      getAllPicks(),
+      currentDate,
+      playoffStartDate
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [players, currentDate, isHydrated, currentPick, isPlayoffPeriod]);
+  }, [players, currentDate, isHydrated, currentPick, playoffStartDate]);
 
   // Filter and sort players
-  const filteredPlayers = useMemo(() => {
-    let filtered = [...playersWithEligibility];
-
-    // Filter by eligibility
-    if (filterBy === "available") {
-      filtered = filtered.filter((p) => p.is_eligible);
-    } else if (filterBy === "locked") {
-      filtered = filtered.filter((p) => !p.is_eligible);
-    }
-
-    // Filter by selected game
-    if (selectedGame) {
-      filtered = filtered.filter((player) => {
-        // Match against away_team-home_team format from backend
-        const gameKey = player.is_home
-          ? `${player.opponent}-${player.team}`
-          : `${player.team}-${player.opponent}`;
-        return gameKey === selectedGame;
-      });
-    }
-
-    // Sort
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case "avg-desc":
-          return b.avg_ttfl_l10 - a.avg_ttfl_l10;
-        case "avg-asc":
-          return a.avg_ttfl_l10 - b.avg_ttfl_l10;
-        case "name-asc":
-          return a.name.localeCompare(b.name);
-        case "name-desc":
-          return b.name.localeCompare(a.name);
-        default:
-          return 0;
-      }
-    });
-
-    return filtered;
-  }, [playersWithEligibility, sortBy, filterBy, selectedGame]);
+  const filteredPlayers = useMemo(
+    () => filterAndSortPlayers(playersWithEligibility, filterBy, sortBy, selectedGame),
+    [playersWithEligibility, sortBy, filterBy, selectedGame]
+  );
 
   const availableCount =
     !loading && isHydrated
@@ -390,61 +288,21 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
 
   const totalCount = !loading && isHydrated ? players.length : null;
 
-  // Convert backend games to frontend format
-  const gamesForFilter = useMemo(() => {
-    return games.map((game) => {
-      const key = `${game.away_team}-${game.home_team}`;
-      return {
-        key,
-        awayTeam: game.away_team,
-        homeTeam: game.home_team,
-        label: `${game.away_team} @ ${game.home_team}`,
-      };
-    });
-  }, [games]);
+  // Convert backend games to filter format
+  const gamesForFilter = useMemo(() => formatGamesForFilter(games), [games]);
 
   const gamesCount = games.length;
 
   // Format injury update timestamp in France time
-  const injuryUpdateTime = snapshot?.metadata.injury_updated_at
-    ? (() => {
-        const date = new Date(snapshot.metadata.injury_updated_at);
-        return date.toLocaleString("en-US", {
-          timeZone: "Europe/Paris",
-          month: "short",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: false,
-        });
-      })()
-    : null;
+  const injuryUpdateTime = formatInjuryUpdateTime(
+    snapshot?.metadata.injury_updated_at ?? null
+  );
 
-  // Get deadline (earliest game time) for current date in Paris time
-  // If game starts after midnight Paris time, show "00:00" as the deadline
-  const deadline = useMemo(() => {
-    if (!snapshot?.metadata.earliest_game_times) return null;
-    const timeUtc = snapshot.metadata.earliest_game_times[currentDate];
-    if (!timeUtc) return null;
-
-    const gameDate = new Date(timeUtc);
-
-    // Get the game's date in Paris timezone
-    const parisDateStr = gameDate.toLocaleDateString("en-CA", {
-      timeZone: "Europe/Paris",
-    });
-
-    // If game is after midnight Paris time (different date than currentDate), show midnight
-    if (parisDateStr !== currentDate) {
-      return "midnight";
-    }
-
-    return gameDate.toLocaleTimeString("fr-FR", {
-      timeZone: "Europe/Paris",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }, [snapshot, currentDate]);
+  // Get pick deadline (earliest game time) for current date in Paris time
+  const deadline = useMemo(
+    () => (snapshot ? getDeadlineForDate(snapshot, currentDate) : null),
+    [snapshot, currentDate]
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6">

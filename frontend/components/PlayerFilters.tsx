@@ -12,18 +12,13 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { FilterOption, SortOption } from "@/lib/players";
+import { GameFilterOption } from "@/lib/snapshot";
 import { Check, SortAsc, Trophy } from "lucide-react";
 import { useState } from "react";
 
-export type SortOption = "avg-desc" | "avg-asc" | "name-asc" | "name-desc";
-export type FilterOption = "all" | "available" | "locked";
-
-export interface Game {
-  key: string;
-  awayTeam: string;
-  homeTeam: string;
-  label: string;
-}
+export type { FilterOption, SortOption };
+export type { GameFilterOption as Game };
 
 interface PlayerFiltersProps {
   sortBy: SortOption;
@@ -34,7 +29,7 @@ interface PlayerFiltersProps {
   availableCount?: number | null;
   lockedCount?: number | null;
   gamesCount?: number | null;
-  games?: Game[];
+  games?: GameFilterOption[];
   selectedGame?: string | null;
   onGameChange?: (gameKey: string | null) => void;
 }
@@ -52,7 +47,8 @@ export default function PlayerFilters({
   selectedGame,
   onGameChange,
 }: PlayerFiltersProps) {
-  const filterBadgeClass = "cursor-pointer shrink-0 px-2 sm:px-3 py-2 text-[11px] sm:text-xs leading-none";
+  const filterBadgeClass =
+    "cursor-pointer shrink-0 px-2 sm:px-3 py-2 text-[11px] sm:text-xs leading-none";
   const [open, setOpen] = useState(false);
   const selectedGameData = games.find((g) => g.key === selectedGame);
 

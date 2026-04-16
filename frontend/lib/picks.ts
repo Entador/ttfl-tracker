@@ -88,9 +88,19 @@ export function getLastPickedDate(playerId: number, fromDate: string): string | 
 }
 
 /**
- * Check if a player is eligible (not picked in last 30 days)
+ * Check if a player is eligible for a given date.
+ * - Regular season: not picked within the last 30 days
+ * - Playoffs: not picked on any other date since playoffStartDate
+ *
+ * Use computeEligibilityMap for bulk checks (more efficient).
  */
-export function isPlayerEligible(playerId: number, forDate: string): boolean {
+export function isPlayerEligible(playerId: number, forDate: string, playoffStartDate?: string | null): boolean {
+  if (playoffStartDate) {
+    const picks = getAllPicks();
+    return !picks.some(
+      (p) => p.playerId === playerId && !p.isSkipped && p.date >= playoffStartDate && p.date !== forDate
+    );
+  }
   return getLastPickedDate(playerId, forDate) === null;
 }
 
@@ -170,6 +180,94 @@ export function getForgottenDates(snapshot: any, currentDate: string): string[] 
   }
 
   return forgottenDates.sort(); // Oldest first
+}
+
+export interface EligibilityInfo {
+  isEligible: boolean;
+  lastPickedDate: string | null;
+  daysUntilEligible: number | null;
+}
+
+/**
+ * Compute eligibility for multiple players at once.
+ * Reads picks once and builds a lookup map — use this for bulk operations.
+ *
+ * Returns a Map<playerId, EligibilityInfo>.
+ * Players not in the map are eligible (no recent picks found).
+ *
+ * @param playoffStartDate - If provided, activates playoff rules: each player can only
+ *   be picked once for the entire playoff period. A pick is classified as a playoff pick
+ *   by comparing its date against this threshold (not by the `playoff` flag on the pick),
+ *   so retroactively edited regular-season picks are never misclassified.
+ */
+export function computeEligibilityMap(
+  picks: Pick[],
+  currentDate: string,
+  playoffStartDate: string | null
+): Map<number, EligibilityInfo> {
+  const map = new Map<number, EligibilityInfo>();
+
+  if (playoffStartDate) {
+    // Playoff rules: ineligible if picked on any other date during the playoff period
+    const playoffPickedIds = new Set(
+      picks
+        .filter((p) => !p.isSkipped && p.date >= playoffStartDate && p.date !== currentDate)
+        .map((p) => p.playerId)
+    );
+    playoffPickedIds.forEach((id) => {
+      map.set(id, { isEligible: false, lastPickedDate: null, daysUntilEligible: null });
+    });
+    return map;
+  }
+
+  // Regular season: 30-day window
+  const from = new Date(currentDate);
+
+  picks.forEach((pick) => {
+    if (pick.isSkipped) return;
+
+    const pickDate = new Date(pick.date);
+    const diffDays = Math.floor(
+      (from.getTime() - pickDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    // Pick counts if it was 1-29 days ago (within 30-day window, but NOT same day)
+    if (diffDays > 0 && diffDays < 30) {
+      const existing = map.get(pick.playerId);
+      if (!existing || pick.date > existing.lastPickedDate!) {
+        map.set(pick.playerId, {
+          isEligible: false,
+          lastPickedDate: pick.date,
+          daysUntilEligible: 30 - diffDays,
+        });
+      }
+    }
+  });
+
+  return map;
+}
+
+/**
+ * Enrich a list of players with eligibility data from localStorage picks.
+ * Pure function — call from a useMemo in the component.
+ */
+export function enrichPlayersWithEligibility<T extends { player_id: number }>(
+  players: T[],
+  allPicks: Pick[],
+  currentDate: string,
+  playoffStartDate: string | null
+): Array<T & { is_eligible: boolean; last_picked_date: string | null; days_until_eligible: number | null }> {
+  const eligibilityMap = computeEligibilityMap(allPicks, currentDate, playoffStartDate);
+
+  return players.map((player) => {
+    const eligibility = eligibilityMap.get(player.player_id);
+    return {
+      ...player,
+      is_eligible: eligibility ? eligibility.isEligible : true,
+      last_picked_date: eligibility?.lastPickedDate ?? null,
+      days_until_eligible: eligibility?.daysUntilEligible ?? null,
+    };
+  });
 }
 
 /**

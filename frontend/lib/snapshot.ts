@@ -1,4 +1,4 @@
-import { SnapshotData, PlayerSnapshot, TeamSnapshot } from './api';
+import { SnapshotData, PlayerSnapshot, TeamSnapshot, GameSnapshot } from './api';
 
 export interface EnrichedPlayer extends PlayerSnapshot {
   opponent: string;
@@ -6,6 +6,87 @@ export interface EnrichedPlayer extends PlayerSnapshot {
   opp_pace: number;
   opp_def_rating: number;
   is_back_to_back: boolean;
+}
+
+export interface StatRange {
+  min: number;
+  max: number;
+  median: number;
+}
+
+export interface StatRanges {
+  pace: StatRange;
+  defRating: StatRange;
+}
+
+export function computeStatRanges(teams: TeamSnapshot[]): StatRanges {
+  const empty: StatRange = { min: 0, max: 0, median: 0 };
+
+  const getRange = (values: number[]): StatRange => {
+    if (values.length === 0) return empty;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median =
+      sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    return { min: sorted[0], max: sorted[sorted.length - 1], median };
+  };
+
+  return {
+    pace: getRange(teams.map((t) => t.pace).filter((v) => v !== null && !isNaN(v))),
+    defRating: getRange(teams.map((t) => t.def_rating).filter((v) => v !== null && !isNaN(v))),
+  };
+}
+
+export interface GameFilterOption {
+  key: string;
+  awayTeam: string;
+  homeTeam: string;
+  label: string;
+}
+
+export function formatGamesForFilter(games: GameSnapshot[]): GameFilterOption[] {
+  return games.map((game) => {
+    const key = `${game.away_team}-${game.home_team}`;
+    return {
+      key,
+      awayTeam: game.away_team,
+      homeTeam: game.home_team,
+      label: `${game.away_team} @ ${game.home_team}`,
+    };
+  });
+}
+
+export function formatInjuryUpdateTime(timestamp: string | null): string | null {
+  if (!timestamp) return null;
+  return new Date(timestamp).toLocaleString('en-US', {
+    timeZone: 'Europe/Paris',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+export function getDeadlineForDate(
+  snapshot: SnapshotData,
+  currentDate: string
+): string | null {
+  const timeUtc = snapshot.metadata.earliest_game_times?.[currentDate];
+  if (!timeUtc) return null;
+
+  const gameDate = new Date(timeUtc);
+  const parisDateStr = gameDate.toLocaleDateString('en-CA', {
+    timeZone: 'Europe/Paris',
+  });
+
+  if (parisDateStr !== currentDate) return 'midnight';
+
+  return gameDate.toLocaleTimeString('fr-FR', {
+    timeZone: 'Europe/Paris',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 /**

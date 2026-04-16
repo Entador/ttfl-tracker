@@ -1,14 +1,12 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { Search } from "lucide-react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { PlayerInfo } from "@/components/PlayerInfo";
 import { getTodayET } from "@/lib/api";
 import { useSnapshot } from "@/lib/hooks/useSnapshot";
-import { getAllPicks } from "@/lib/picks";
-import { PlayerSnapshot } from "@/lib/api";
+import { enrichPlayersWithEligibility, getAllPicks } from "@/lib/picks";
 
 const LOGO_SIZE = 28;
 type SortKey = "rank" | "avg_ttfl_l10" | "avg_ttfl_l30d" | "name";
@@ -51,33 +49,25 @@ export default function RankingsView() {
     return sorted.map((p, i) => ({ ...p, rank: i + 1 }));
   }, [snapshot]);
 
+  const playoffStartDate = snapshot?.metadata.playoff_start_date ?? null;
+
   // Apply eligibility from localStorage
   const playersWithEligibility = useMemo(() => {
-    if (!isHydrated) return rankedPlayers.map((p) => ({ ...p, is_eligible: true, days_until_eligible: null }));
+    if (!isHydrated)
+      return rankedPlayers.map((p) => ({
+        ...p,
+        is_eligible: true,
+        last_picked_date: null,
+        days_until_eligible: null,
+      }));
 
-    const today = getTodayET();
-    const from = new Date(today);
-    const allPicks = getAllPicks();
-
-    const eligibilityMap = new Map<number, number>();
-    allPicks.forEach((pick) => {
-      const diffDays = Math.floor(
-        (from.getTime() - new Date(pick.date).getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (diffDays > 0 && diffDays < 30) {
-        const existing = eligibilityMap.get(pick.playerId);
-        const daysLeft = 30 - diffDays;
-        if (!existing || daysLeft > existing) {
-          eligibilityMap.set(pick.playerId, daysLeft);
-        }
-      }
-    });
-
-    return rankedPlayers.map((p) => {
-      const daysLeft = eligibilityMap.get(p.player_id) ?? null;
-      return { ...p, is_eligible: daysLeft === null, days_until_eligible: daysLeft };
-    });
-  }, [rankedPlayers, isHydrated]);
+    return enrichPlayersWithEligibility(
+      rankedPlayers,
+      getAllPicks(),
+      getTodayET(),
+      playoffStartDate
+    );
+  }, [rankedPlayers, isHydrated, playoffStartDate]);
 
   // Filter + sort
   const filtered = useMemo(() => {
@@ -87,8 +77,7 @@ export default function RankingsView() {
       const q = search.trim().toLowerCase();
       result = result.filter(
         (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.team.toLowerCase().includes(q)
+          p.name.toLowerCase().includes(q) || p.team.toLowerCase().includes(q)
       );
     }
 
@@ -115,7 +104,9 @@ export default function RankingsView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-5xl font-bold tracking-tight">Rankings</h1>
+          <h1 className="text-2xl sm:text-5xl font-bold tracking-tight">
+            Rankings
+          </h1>
           <p className="text-xs text-muted-foreground mt-1">
             {filtered.length} players · season averages
           </p>
@@ -162,7 +153,9 @@ export default function RankingsView() {
               <th></th>
             </tr>
             <tr className="border-b bg-muted/20">
-              <th className="w-10 px-3 py-2 text-right font-medium text-muted-foreground">#</th>
+              <th className="w-10 px-3 py-2 text-right font-medium text-muted-foreground">
+                #
+              </th>
               <th className="px-3 py-2 text-left font-medium">Player</th>
               <th className="px-3 py-2 text-right font-medium border-l-[3px] border-primary/50">
                 Season
@@ -181,7 +174,9 @@ export default function RankingsView() {
                   key={player.player_id}
                   className="hover:bg-muted/50 transition-colors leading-tight sm:leading-normal"
                 >
-                  <td className={`w-10 px-3 py-1 text-right tabular-nums text-muted-foreground text-xs ${ineligible ? "opacity-50" : ""}`}>
+                  <td
+                    className={`w-10 px-3 py-1 text-right tabular-nums text-muted-foreground text-xs ${ineligible ? "opacity-50" : ""}`}
+                  >
                     {player.rank}
                   </td>
                   <td className={`px-3 py-1 ${ineligible ? "opacity-50" : ""}`}>
@@ -199,16 +194,26 @@ export default function RankingsView() {
                       )}
                     </div>
                   </td>
-                  <td className={`px-3 py-1 text-right tabular-nums border-l-[3px] border-primary/50 bg-primary/3 ${ineligible ? "opacity-50" : ""}`}>
+                  <td
+                    className={`px-3 py-1 text-right tabular-nums border-l-[3px] border-primary/50 bg-primary/3 ${ineligible ? "opacity-50" : ""}`}
+                  >
                     {player.avg_ttfl.toFixed(1)}
                   </td>
-                  <td className={`px-3 py-1 text-right tabular-nums text-muted-foreground bg-primary/3 ${ineligible ? "opacity-50" : ""}`}>
-                    {player.avg_ttfl_week_ago > 0 ? player.avg_ttfl_week_ago.toFixed(1) : "—"}
+                  <td
+                    className={`px-3 py-1 text-right tabular-nums text-muted-foreground bg-primary/3 ${ineligible ? "opacity-50" : ""}`}
+                  >
+                    {player.avg_ttfl_week_ago > 0
+                      ? player.avg_ttfl_week_ago.toFixed(1)
+                      : "—"}
                   </td>
-                  <td className={`px-3 py-1 text-right font-semibold tabular-nums bg-primary/3 ${ineligible ? "opacity-50" : ""}`}>
+                  <td
+                    className={`px-3 py-1 text-right font-semibold tabular-nums bg-primary/3 ${ineligible ? "opacity-50" : ""}`}
+                  >
                     {player.avg_ttfl_l10.toFixed(1)}
                   </td>
-                  <td className={`px-3 py-1 text-right tabular-nums text-muted-foreground bg-primary/3 ${ineligible ? "opacity-50" : ""}`}>
+                  <td
+                    className={`px-3 py-1 text-right tabular-nums text-muted-foreground bg-primary/3 ${ineligible ? "opacity-50" : ""}`}
+                  >
                     {player.avg_ttfl_l30d.toFixed(1)}
                   </td>
                   <td className="w-14 px-3 py-1 text-center">

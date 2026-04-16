@@ -142,6 +142,11 @@ def get_snapshot(db: Session = Depends(get_db)):
             or any(g.nba_game_id.startswith('004') for g in upcoming_games)
         )
 
+        playoff_games = [g for g in all_games if g.nba_game_id.startswith('004')]
+        playoff_start_date = (
+            min(g.game_date for g in playoff_games).isoformat() if playoff_games else None
+        )
+
         return {
             'metadata': {
                 'generated_at': datetime.now(timezone.utc).isoformat(),
@@ -151,6 +156,7 @@ def get_snapshot(db: Session = Depends(get_db)):
                 'injury_updated_at': injury_updated_at,
                 'earliest_game_times': earliest_game_times,
                 'is_playoff_period': is_playoff_period,
+                'playoff_start_date': playoff_start_date,
             },
             'players': players_data,
             'games': games_data,
