@@ -24,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.className} min-h-screen bg-background antialiased`}
+        className={`${inter.className} min-h-screen bg-background antialiased flex flex-col`}
       >
         <nav className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-md shadow-sm">
           <div className="container mx-auto px-3 sm:px-6 lg:px-8">
@@ -62,11 +62,11 @@ export default function RootLayout({
             </div>
           </div>
         </nav>
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-8">
+        <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-8">
           {children}
         </main>
-        <footer className="border-t mt-16 bg-muted/30">
-          <div className="container mx-auto px-4 py-8 text-center">
+        <footer className="border-t bg-muted/30">
+          <div className="container mx-auto px-4 py-5 text-center">
             <p className="text-sm text-muted-foreground">
               TTFL Tracker - Make smarter picks with data-driven insights
             </p>
