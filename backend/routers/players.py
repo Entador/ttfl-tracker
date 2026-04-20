@@ -32,29 +32,6 @@ def _calculate_player_avg_ttfl(db: Session, player_id: int, limit: int = 15) -> 
         return 0.0
     return round(sum(s.ttfl_score for s in scores) / len(scores), 1)
 
-
-def _calculate_player_avg_ttfl_last_days(db: Session, player_id: int, days: int) -> float:
-    """Calculate average TTFL score from games in the last N days where player played."""
-    cutoff_date = date.today() - timedelta(days=days)
-    scores = (
-        db.query(TTFLScore.ttfl_score)
-        .join(Game)
-        .filter(
-            TTFLScore.player_id == player_id,
-            TTFLScore.ttfl_score.isnot(None),
-            TTFLScore.minutes > 0,
-            Game.game_date >= cutoff_date
-        )
-        .all()
-    )
-    if not scores:
-        return 0.0
-    return round(sum(s.ttfl_score for s in scores) / len(scores), 1)
-
-
-# Moved to services/player_stats.py for reuse across endpoints
-
-
 @router.get("/players/all")
 def get_all_players(db: Session = Depends(get_db)):
     """

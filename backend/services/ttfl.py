@@ -41,28 +41,3 @@ def calculate_ttfl_score(box_score: dict) -> int:
     negative = tov + fg_missed + fg3_missed + ft_missed
 
     return int(positive - negative)
-
-
-def calculate_average_ttfl_score(games: list[dict]) -> float:
-    """
-    Calculate average TTFL score from a list of game box scores.
-
-    Only includes games where the player actually played (MIN > 0).
-
-    Args:
-        games: List of game dictionaries with box scores
-
-    Returns:
-        Average TTFL score, or 0.0 if no games played
-    """
-    if not games:
-        return 0.0
-
-    # Filter to only games where player actually played
-    played_games = [g for g in games if (g.get('MIN') or 0) > 0]
-
-    if not played_games:
-        return 0.0
-
-    total_score = sum(calculate_ttfl_score(game) for game in played_games)
-    return round(total_score / len(played_games), 1)
