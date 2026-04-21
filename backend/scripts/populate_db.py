@@ -29,11 +29,12 @@ sys.path.insert(0, str(__file__).rsplit("/", 2)[0])
 
 from sqlalchemy.orm import Session
 from nba_api.stats.static import teams as nba_teams
-from nba_api.stats.endpoints import commonteamroster, scheduleleaguev2
 
 from models.database import SessionLocal, engine, Base
 from models import Team, Player, Game
-from services.nba_api import get_current_season
+from services.client import NBAClient
+
+nba_client = NBAClient()
 
 
 def parse_utc_datetime(dt_string: str) -> datetime | None:
@@ -96,7 +97,7 @@ def populate_rosters(db: Session, team_map: dict[int, int]) -> dict[int, int]:
         Mapping of nba_player_id -> db player id
     """
     print("\n=== Populating Rosters ===")
-    season = get_current_season()
+    season = NBAClient._get_current_season()
     player_map = {}
     new_count = 0
     updated_count = 0
@@ -105,14 +106,8 @@ def populate_rosters(db: Session, team_map: dict[int, int]) -> dict[int, int]:
         team = db.query(Team).filter(Team.id == db_team_id).first()
         print(f"\n  {team.abbreviation}:", end=" ")
 
-        time.sleep(0.6)  # Rate limiting
-
         try:
-            roster = commonteamroster.CommonTeamRoster(
-                team_id=nba_team_id,
-                season=season
-            )
-            roster_df = roster.common_team_roster.get_data_frame()
+            roster_df = nba_client.get_team_roster(nba_team_id, season)
         except Exception as e:
             print(f"ERROR - {e}")
             continue
@@ -163,19 +158,12 @@ def populate_games(
     Populate full season schedule with game scores for finished games.
     """
     print("\n=== Populating Games (Full Schedule) ===")
-    season = get_current_season()
+    season = NBAClient._get_current_season()
 
     print(f"  Season: {season}")
 
-    time.sleep(0.6)
-
-    # Fetch full season schedule
     try:
-        schedule = scheduleleaguev2.ScheduleLeagueV2(
-            season=season,
-            league_id="00",  # NBA
-        )
-        games_df = schedule.season_games.get_data_frame()
+        games_df = nba_client.get_schedule(season)
     except Exception as e:
         print(f"ERROR fetching schedule: {e}")
         return

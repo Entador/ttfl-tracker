@@ -59,12 +59,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from nba_api.stats.endpoints import scheduleleaguev2, commonteamroster
 from nba_api.stats.static import teams
 
 from models.database import SessionLocal
 from models import Team, Player, Game, TTFLScore, AppMetadata
-from services.nba_api import get_current_season, get_all_team_stats, get_game_box_scores, get_player_stats, get_proxy_url
+from services.client import NBAClient
+
+nba_client = NBAClient()
 from services.ttfl import calculate_ttfl_score
 from services.injuries import update_player_injuries
 from services.injuries_nba import update_player_injuries_nba
@@ -102,21 +103,11 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
     print("Phase 1: Update Game Statuses")
     print("=" * 50)
 
-    season = get_current_season()
+    season = NBAClient._get_current_season()
     print(f"Season: {season}")
 
-    @retry_on_timeout(max_retries=3, base_delay=10.0)
-    def fetch_schedule():
-        schedule = scheduleleaguev2.ScheduleLeagueV2(
-            season=season,
-            league_id="00",
-            proxy=get_proxy_url(),
-            timeout=60
-        )
-        return schedule.season_games.get_data_frame()
-
     try:
-        games_df = fetch_schedule()
+        games_df = nba_client.get_schedule(season)
     except Exception as e:
         print(f"ERROR fetching schedule: {e}")
         return 0
@@ -338,7 +329,7 @@ def populate_ttfl_scores(db: Session, dry_run: bool = False) -> tuple[int, int, 
         print(f"  {game.nba_game_id} ({game.game_date})", end=" ")
 
         try:
-            box_scores = get_game_box_scores(game.nba_game_id)
+            box_scores = nba_client.get_game_box_scores(game.nba_game_id)
         except Exception as e:
             print(f"- error: {e}")
             games_failed.append(game)
@@ -411,7 +402,7 @@ def populate_ttfl_scores(db: Session, dry_run: bool = False) -> tuple[int, int, 
                 print(f"    Progress: {i + 1}/{len(relevant_players)}")
 
             try:
-                game_logs = get_player_stats(player.nba_player_id, num_recent_games=15)
+                game_logs = nba_client.get_player_stats(player.nba_player_id, num_recent_games=15)
             except Exception:
                 continue
 
@@ -479,13 +470,13 @@ def update_team_stats(db: Session, dry_run: bool = False) -> int:
     print("Phase 3: Update Team Stats")
     print("=" * 50)
 
-    season = get_current_season()
+    season = NBAClient._get_current_season()
     print(f"Season: {season}")
     print("Fetching team stats from NBA API...")
 
     @retry_on_timeout(max_retries=3, base_delay=10.0)
     def fetch_team_stats():
-        return get_all_team_stats(season)
+        return nba_client.get_all_team_stats(season)
 
     try:
         team_stats = fetch_team_stats()
@@ -611,7 +602,7 @@ def update_player_trades(db: Session, dry_run: bool = False) -> dict:
     print("Phase 5: Update Player Trades")
     print("=" * 50)
 
-    season = get_current_season()
+    season = NBAClient._get_current_season()
     print(f"Season: {season}")
 
     # Get all NBA teams
@@ -644,20 +635,7 @@ def update_player_trades(db: Session, dry_run: bool = False) -> dict:
         print(f"  Checking {team_abbr}...", end=" ")
 
         try:
-            # Fetch current roster from NBA API
-            time.sleep(0.6)  # Rate limiting
-
-            @retry_on_timeout(max_retries=3, base_delay=5.0)
-            def fetch_roster():
-                roster = commonteamroster.CommonTeamRoster(
-                    team_id=nba_team_id,
-                    season=season,
-                    proxy=get_proxy_url(),
-                    timeout=60
-                )
-                return roster.common_team_roster.get_data_frame()
-
-            roster_df = fetch_roster()
+            roster_df = nba_client.get_team_roster(nba_team_id, season)
 
             if roster_df.empty:
                 print("no roster data")

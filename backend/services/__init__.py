@@ -1,3 +1,4 @@
-from . import nba_api, ttfl
+from . import ttfl
+from .client import NBAClient
 
-__all__ = ['nba_api', 'ttfl']
+__all__ = ['NBAClient', 'ttfl']
