@@ -21,7 +21,7 @@ Options:
     --trades-only     Only update player trades
     --dry-run         Show what would be done without making changes
 """
-
+import os
 import sys
 import argparse
 import traceback
@@ -31,6 +31,21 @@ from pathlib import Path
 from functools import wraps
 
 import pandas as pd
+from sqlalchemy.orm import Session
+from sqlalchemy import and_
+from nba_api.stats.static import teams
+from datetime import date
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from models.database import SessionLocal
+from models import Team, Player, Game, TTFLScore, AppMetadata
+from services.client import NBAClient
+from services.ttfl import calculate_ttfl_score
+from services.injuries import update_player_injuries
+from services.injuries_nba import update_player_injuries_nba
+
+nba_client = NBAClient()
 
 
 def retry_on_timeout(max_retries: int = 3, base_delay: float = 5.0):
@@ -54,21 +69,6 @@ def retry_on_timeout(max_retries: int = 3, base_delay: float = 5.0):
             raise last_exception
         return wrapper
     return decorator
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from sqlalchemy.orm import Session
-from sqlalchemy import and_
-from nba_api.stats.static import teams
-
-from models.database import SessionLocal
-from models import Team, Player, Game, TTFLScore, AppMetadata
-from services.client import NBAClient
-
-nba_client = NBAClient()
-from services.ttfl import calculate_ttfl_score
-from services.injuries import update_player_injuries
-from services.injuries_nba import update_player_injuries_nba
 
 
 def parse_utc_datetime(dt_string: str) -> datetime | None:
@@ -234,7 +234,6 @@ def update_game_statuses(db: Session, dry_run: bool = False) -> int:
 
         if new_playoff_ids:
             # Load team map for lookups
-            from models import Team
             db_teams = db.query(Team).all()
             team_map = {t.nba_team_id: t.id for t in db_teams}
 
@@ -291,7 +290,6 @@ def populate_ttfl_scores(db: Session, dry_run: bool = False) -> tuple[int, int, 
     print("Phase 2: Populate TTFL Scores")
     print("=" * 50)
 
-    from datetime import date
     regular_season_start = date(2025, 10, 22)
 
     # Pre-load all players for efficient lookup
@@ -540,7 +538,6 @@ def update_injuries(db: Session, dry_run: bool = False) -> dict:
     Returns:
         Dict with update stats
     """
-    import os
     injury_source = os.getenv("INJURY_SOURCE", "nba").lower()
 
     print("\n" + "=" * 50)

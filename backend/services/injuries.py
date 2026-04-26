@@ -9,8 +9,8 @@ import json
 import unicodedata
 import httpx
 from sqlalchemy.orm import Session
-
-from models import Player
+from utils import normalize_name
+from models import Team, Player
 
 
 ESPN_INJURIES_URL = "https://www.espn.com/nba/injuries"
@@ -132,8 +132,6 @@ def update_player_injuries(db: Session) -> dict:
             'not_found': list, # Player names not matched in DB
         }
     """
-    from models import Team
-
     injuries = scrape_espn_injuries()
 
     if not injuries:

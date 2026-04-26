@@ -8,6 +8,8 @@ from models import AppMetadata
 from services.cache import app_cache
 from services.player_stats import batch_calculate_averages, get_playoff_round
 
+import traceback
+
 router = APIRouter()
 
 
@@ -177,7 +179,6 @@ def get_snapshot(db: Session = Depends(get_db)):
         }
 
     except Exception as e:
-        import traceback
         print(f"Error in get_snapshot: {e}")
         print(traceback.format_exc())
         raise HTTPException(

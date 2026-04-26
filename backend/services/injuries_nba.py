@@ -17,7 +17,8 @@ import httpx
 import pdfplumber
 from sqlalchemy.orm import Session
 
-from models import Player
+from models import Player, Team
+from utils import normalize_name
 
 
 NBA_INJURY_PAGE_URL = "https://official.nba.com/nba-injury-report-2025-26-season/"
@@ -276,8 +277,6 @@ def update_player_injuries_nba(db: Session) -> dict:
             'not_found': list,
         }
     """
-    from models import Team
-
     injuries, not_submitted_teams = scrape_nba_injuries()
 
     if not injuries and not not_submitted_teams:

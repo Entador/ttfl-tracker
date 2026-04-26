@@ -9,6 +9,9 @@ Pre-loads static/semi-static data on app startup to reduce database queries:
 
 from typing import Dict, List, Optional
 from datetime import date, datetime, timezone
+from models import Player, Team, Game
+from sqlalchemy.orm import joinedload
+from sqlalchemy import text
 
 INJURY_TTL_SECONDS = 3600  # 1 hour
 
@@ -32,8 +35,6 @@ class AppCache:
         Args:
             db: SQLAlchemy database session
         """
-        from models import Game, Team, Player
-        from sqlalchemy.orm import joinedload
 
         print("Loading game schedule and players into memory...")
 
@@ -191,9 +192,6 @@ class AppCache:
         if (self._injuries_loaded_at is not None and
                 (now - self._injuries_loaded_at).total_seconds() < INJURY_TTL_SECONDS):
             return False
-
-        from models import Player
-        from sqlalchemy import text
 
         rows = db.execute(
             text("SELECT id, injury_status, injury_return_date, injury_details FROM players")

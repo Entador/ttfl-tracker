@@ -2,9 +2,12 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Optional
 
+import traceback
+
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
 
 from models.database import get_db
 from models import Player, Game, Team, TTFLScore
@@ -56,7 +59,6 @@ def get_all_players(db: Session = Depends(get_db)):
 
         return result
     except Exception as e:
-        import traceback
         print(f"Error in get_all_players: {e}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error fetching all players: {str(e)}")
@@ -164,7 +166,6 @@ def get_tonights_players(game_date: Optional[str] = None, db: Session = Depends(
         }
 
     except Exception as e:
-        import traceback
         print(f"Error in get_tonights_players: {e}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error fetching tonight's players: {str(e)}")
@@ -200,7 +201,6 @@ def get_player_stats(player_id: int, db: Session = Depends(get_db)):
 
         # Get all completed games for the player's team, left-joining TTFLScore
         # so DNP games (no record or minutes=0) are also included
-        from sqlalchemy import or_
         recent_scores = (
             db.query(Game, TTFLScore)
             .outerjoin(
@@ -268,7 +268,6 @@ def get_player_stats(player_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        import traceback
         print(f"Error in get_player_stats: {e}")
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error fetching player stats: {str(e)}")
