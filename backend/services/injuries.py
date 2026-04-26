@@ -111,14 +111,6 @@ def scrape_espn_injuries() -> list[dict]:
         return []
 
 
-def normalize_name(name: str) -> str:
-    """Normalize player name for matching (lowercase, remove accents)."""
-    # Remove accents: é -> e, ć -> c, ū -> u, etc.
-    normalized = unicodedata.normalize("NFKD", name)
-    ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
-    return ascii_name.lower().strip()
-
-
 def update_player_injuries(db: Session) -> dict:
     """
     Fetch ESPN injuries and update player records in the database.

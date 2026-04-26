@@ -1,3 +1,3 @@
-from . import players, games
+from . import players
 
 __all__ = ['players', 'games']

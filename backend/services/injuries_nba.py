@@ -254,14 +254,6 @@ def scrape_nba_injuries() -> tuple[list[dict], set[str]]:
         print(f"Error parsing NBA injury PDF: {e}")
         return [], set()
 
-
-def normalize_name(name: str) -> str:
-    """Normalize player name for matching (lowercase, remove accents)."""
-    normalized = unicodedata.normalize("NFKD", name)
-    ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
-    return ascii_name.lower().strip()
-
-
 def update_player_injuries_nba(db: Session) -> dict:
     """
     Fetch NBA official injury report and update player records in the database.

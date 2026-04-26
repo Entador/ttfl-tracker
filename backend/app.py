@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from routers import players, games, snapshot
+from routers import players, snapshot
 from services.cache import app_cache
 from models.database import SessionLocal, get_db
 
@@ -37,7 +37,6 @@ async def startup_event():
 
 # Include routers
 app.include_router(players.router, prefix="/api", tags=["players"])
-app.include_router(games.router, prefix="/api", tags=["games"])
 app.include_router(snapshot.router, prefix="/api", tags=["snapshot"])
 
 

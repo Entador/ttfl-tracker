@@ -27,16 +27,6 @@ export interface Player {
   injury_details: string | null;
 }
 
-export interface GameInfo {
-  away_team: string;
-  home_team: string;
-}
-
-export interface PlayersResponse {
-  players: Player[];
-  games: GameInfo[];
-}
-
 export interface PlayerStats {
   player: {
     id: number;
@@ -59,15 +49,6 @@ export interface PlayerStats {
   consistency: "High" | "Medium" | "Low";
 }
 
-export interface PickHistory {
-  date: string;
-  player_id: number;
-  player_name: string;
-  team: string;
-  opponent: string;
-  is_home: boolean;
-  ttfl_score: number;
-}
 
 /**
  * Fetch from API - works both server-side and client-side.
@@ -98,35 +79,10 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
   }
 }
 
-/**
- * Server-side fetch for tonight's players.
- * Uses cache: 'no-store' to always get fresh data.
- */
-export async function getPlayersForDate(date: string): Promise<PlayersResponse> {
-  const endpoint = `/api/players/tonight?game_date=${date}`;
-  return fetchAPI<PlayersResponse>(endpoint, { cache: 'no-store' });
-}
-
-/**
- * Client-side fetch for tonight's players (used after date navigation).
- */
-export async function getTonightsPlayers(date?: string): Promise<PlayersResponse> {
-  const endpoint = date
-    ? `/api/players/tonight?game_date=${date}`
-    : '/api/players/tonight';
-
-  return fetchAPI<PlayersResponse>(endpoint);
-}
-
 export async function getPlayerStats(playerId: number): Promise<PlayerStats> {
   return await fetchAPI<PlayerStats>(`/api/players/${playerId}/stats`);
 }
 
-// pickPlayer removed - picks are now stored in localStorage via lib/picks.ts
-
-export async function getPickHistory(limit: number = 50): Promise<PickHistory[]> {
-  return await fetchAPI<PickHistory[]>(`/api/games/history?limit=${limit}`);
-}
 
 // Snapshot API - returns entire season data
 export interface SnapshotMetadata {
