@@ -133,6 +133,9 @@ export interface PlayerWithEligibility extends Player {
   is_back_to_back: boolean;
   rank_delta: number | null;
   avg_ttfl_week_ago: number;
+  avg_ttfl_playoffs: number | null;
+  avg_ttfl_current_round: number | null;
+  avg_ttfl_last_round: number | null;
 }
 
 interface StatRange {
@@ -154,6 +157,9 @@ interface PlayersTableProps {
   statRanges: StatRanges;
   onPickPlayer: (playerId: number) => void;
   onRemovePick: () => void;
+  isPlayoffPeriod?: boolean;
+  currentPlayoffRound?: number | null;
+  lastPlayoffRound?: number | null;
 }
 
 /**
@@ -184,6 +190,9 @@ export default function PlayersTable({
   statRanges,
   onPickPlayer,
   onRemovePick,
+  isPlayoffPeriod = false,
+  currentPlayoffRound = null,
+  lastPlayoffRound = null,
 }: PlayersTableProps) {
   return (
     <div className="relative animate-fade-in">
@@ -213,6 +222,14 @@ export default function PlayersTable({
               >
                 TTFL
               </th>
+              {isPlayoffPeriod && (
+                <th
+                  className="px-3 py-2 text-center font-semibold uppercase tracking-wide text-amber-500 border-l-[3px] border-amber-400/50"
+                  colSpan={3}
+                >
+                  Playoffs
+                </th>
+              )}
               <th></th>
               <th></th>
             </tr>
@@ -233,6 +250,19 @@ export default function PlayersTable({
               <th className="px-3 py-2 text-right font-medium">-14d</th>
               <th className="px-3 py-2 text-right font-medium">L10</th>
               <th className="px-3 py-2 text-right font-medium">30d</th>
+              {isPlayoffPeriod && (
+                <>
+                  <th className="px-3 py-2 text-right font-medium border-l-[3px] border-amber-400/50">
+                    All
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium">
+                    {lastPlayoffRound ? `Rnd ${lastPlayoffRound}` : "—"}
+                  </th>
+                  <th className="px-3 py-2 text-right font-medium">
+                    {currentPlayoffRound ? `Rnd ${currentPlayoffRound}` : "—"}
+                  </th>
+                </>
+              )}
               <th className="w-8 px-2 py-2"></th>
               <th className="w-14 px-2 py-2"></th>
             </tr>
@@ -340,6 +370,37 @@ export default function PlayersTable({
                   >
                     {player.avg_ttfl_l30d.toFixed(1)}
                   </td>
+                  {isPlayoffPeriod && (
+                    <>
+                      <td
+                        className={`px-3 py-0.5 sm:py-1 text-right font-semibold tabular-nums border-l-[3px] border-amber-400/50 bg-amber-500/3 ${
+                          isIneligible ? "opacity-50" : ""
+                        }`}
+                      >
+                        {player.avg_ttfl_playoffs != null
+                          ? player.avg_ttfl_playoffs.toFixed(1)
+                          : "—"}
+                      </td>
+                      <td
+                        className={`px-3 py-0.5 sm:py-1 text-right text-muted-foreground tabular-nums bg-amber-500/3 ${
+                          isIneligible ? "opacity-50" : ""
+                        }`}
+                      >
+                        {player.avg_ttfl_last_round != null
+                          ? player.avg_ttfl_last_round.toFixed(1)
+                          : "—"}
+                      </td>
+                      <td
+                        className={`px-3 py-0.5 sm:py-1 text-right text-muted-foreground tabular-nums bg-amber-500/3 ${
+                          isIneligible ? "opacity-50" : ""
+                        }`}
+                      >
+                        {player.avg_ttfl_current_round != null
+                          ? player.avg_ttfl_current_round.toFixed(1)
+                          : "—"}
+                      </td>
+                    </>
+                  )}
                   <td className="px-2 py-0.5 sm:py-1 text-center">
                     <RankTrend delta={player.rank_delta} />
                   </td>

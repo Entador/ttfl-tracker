@@ -138,6 +138,8 @@ export interface SnapshotMetadata {
   earliest_game_times: Record<string, string>; // date (YYYY-MM-DD) -> ISO timestamp
   is_playoff_period: boolean;
   playoff_start_date: string | null; // YYYY-MM-DD, earliest date of a playoff game
+  current_playoff_round: number | null;
+  last_playoff_round: number | null;
 }
 
 export interface PlayerSnapshot {
@@ -149,6 +151,9 @@ export interface PlayerSnapshot {
   avg_ttfl_week_ago: number;
   avg_ttfl_l10: number;
   avg_ttfl_l30d: number;
+  avg_ttfl_playoffs: number | null;
+  avg_ttfl_current_round: number | null;
+  avg_ttfl_last_round: number | null;
   rank_delta: number | null;
   injury_status: string | null;
   injury_return_date: string | null;

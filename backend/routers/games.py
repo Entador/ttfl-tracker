@@ -4,7 +4,8 @@ from datetime import date, datetime
 from sqlalchemy.orm import Session
 
 from models.database import get_db
-from models import Game, Team
+from models import Game
+from services.cache import app_cache
 
 router = APIRouter()
 
@@ -33,8 +34,8 @@ def get_games(
 
         result = []
         for game in games:
-            home_team = db.query(Team).filter(Team.id == game.home_team_id).first()
-            away_team = db.query(Team).filter(Team.id == game.away_team_id).first()
+            home_team = app_cache.get_team(game.home_team_id)
+            away_team = app_cache.get_team(game.away_team_id)
 
             result.append({
                 'game_id': game.nba_game_id,

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from models.database import get_db
 from models import AppMetadata
 from services.cache import app_cache
-from services.player_stats import batch_calculate_averages
+from services.player_stats import batch_calculate_averages, get_playoff_round
 
 router = APIRouter()
 
@@ -45,9 +45,14 @@ def get_snapshot(db: Session = Depends(get_db)):
         # Get all active players from cache
         all_players = [p for p in app_cache.players_by_id.values() if p.is_active]
 
+        # Detect current and previous playoff round (needed for per-round stat calculation)
+        _playoff_rounds = {get_playoff_round(g.nba_game_id) for g in all_games if g.nba_game_id.startswith('004')} - {None}
+        current_playoff_round = max(_playoff_rounds) if _playoff_rounds else None
+        last_playoff_round = (current_playoff_round - 1) if current_playoff_round and current_playoff_round > 1 else None
+
         # Batch calculate TTFL averages for all players (single DB query)
         player_ids = [p.id for p in all_players]
-        averages = batch_calculate_averages(db, player_ids)
+        averages = batch_calculate_averages(db, player_ids, current_playoff_round, last_playoff_round)
 
         # Get all teams from cache
         all_teams = list(app_cache.teams_by_id.values())
@@ -80,6 +85,9 @@ def get_snapshot(db: Session = Depends(get_db)):
                 'avg_ttfl_l10': 0.0,
                 'avg_ttfl_l30d': 0.0,
                 'avg_ttfl_week_ago': 0.0,
+                'avg_ttfl_playoffs': None,
+                'avg_ttfl_current_round': None,
+                'avg_ttfl_last_round': None,
             })
 
             # rank_delta > 0 means rising, < 0 means falling, None means not enough data
@@ -96,6 +104,9 @@ def get_snapshot(db: Session = Depends(get_db)):
                 'avg_ttfl_week_ago': round(avgs['avg_ttfl_week_ago'], 1),
                 'avg_ttfl_l10': round(avgs['avg_ttfl_l10'], 1),
                 'avg_ttfl_l30d': round(avgs['avg_ttfl_l30d'], 1),
+                'avg_ttfl_playoffs': round(avgs['avg_ttfl_playoffs'], 1) if avgs['avg_ttfl_playoffs'] is not None else None,
+                'avg_ttfl_current_round': round(avgs['avg_ttfl_current_round'], 1) if avgs['avg_ttfl_current_round'] is not None else None,
+                'avg_ttfl_last_round': round(avgs['avg_ttfl_last_round'], 1) if avgs['avg_ttfl_last_round'] is not None else None,
                 'rank_delta': rank_delta,
                 'injury_status': player.injury_status,
                 'injury_return_date': player.injury_return_date,
@@ -157,6 +168,8 @@ def get_snapshot(db: Session = Depends(get_db)):
                 'earliest_game_times': earliest_game_times,
                 'is_playoff_period': is_playoff_period,
                 'playoff_start_date': playoff_start_date,
+                'current_playoff_round': current_playoff_round,
+                'last_playoff_round': last_playoff_round,
             },
             'players': players_data,
             'games': games_data,

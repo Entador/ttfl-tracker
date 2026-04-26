@@ -485,6 +485,9 @@ export default function PlayersView({ initialDate }: PlayersViewProps) {
                   statRanges={statRanges}
                   onPickPlayer={handlePickPlayer}
                   onRemovePick={handleRemovePick}
+                  isPlayoffPeriod={snapshot?.metadata.is_playoff_period}
+                  currentPlayoffRound={snapshot?.metadata.current_playoff_round}
+                  lastPlayoffRound={snapshot?.metadata.last_playoff_round}
                 />
               )}
             </>
